@@ -15,6 +15,7 @@ public class Lexer {
 	private int line = 1;
 	// 保留字
 	private final static HashMap<String, TokenType> reservedWords = new HashMap<String, TokenType>(){{
+		// 通过匿名内部类实现创建时添加数据
 		put("main", TokenType.MAINTK);
 		put("const", TokenType.CONSTTK);
 		put("int", TokenType.INTTK);
@@ -37,6 +38,10 @@ public class Lexer {
 		this.program = program;
 	}
 
+	/**
+	 * 对整个程序进行词法分析，返回一个ArrayList，包含划分的所有单词
+	 * @return 划分的所有单词
+	 */
 	public ArrayList<Token> analyze() {
 		ArrayList<Token> tokens = new ArrayList<>();
 		while (hasNext()) {

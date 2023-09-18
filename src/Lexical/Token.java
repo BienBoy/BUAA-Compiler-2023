@@ -6,6 +6,12 @@ public class Token {
 	private int intValue; // 数值大小，仅在type==INTCON时使用
 	private int line; // 所在行号
 
+	/**
+	 * 构造方法
+	 * @param type 单词类别
+	 * @param rawString 原始字符串
+	 * @param line 所在行号
+	 */
 	public Token(TokenType type, String rawString, int line) {
 		this.type = type;
 		this.rawString = rawString;

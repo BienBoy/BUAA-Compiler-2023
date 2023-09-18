@@ -1,5 +1,8 @@
 package Lexical;
 
+/**
+ * 单词类别
+ */
 public enum TokenType {
 	IDENFR, INTCON, STRCON, MAINTK, CONSTTK, INTTK, BREAKTK, CONTINUETK,
 	IFTK, ELSETK, NOT, AND, OR, FORTK, GETINTTK, PRINTFTK, RETURNTK,
