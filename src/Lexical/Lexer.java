@@ -215,6 +215,9 @@ public class Lexer {
 			return;
 		}
 		while (hasNext()) {
+			if (program.charAt(position) == '\n') {
+				line++;
+			}
 			position++;
 			if (position + 1 >= program.length()) {
 				break;
