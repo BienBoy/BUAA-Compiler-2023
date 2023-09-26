@@ -6,6 +6,7 @@ import Lexical.Token;
 import Lexical.TokenType;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
 
 /**
  * 语法分析器
@@ -56,50 +57,58 @@ public class Parser {
 
 	// 以下为所有非终结符的分析程序
 	private CompUnit CompUnit() {
-		// 存在一个小问题：未考虑Decl、FuncDef以及MainFuncDef的出现顺序
 		CompUnit compUnit = new CompUnit();
-		// 未获取到MainFuncDef时，循环分析
-		while (true) {
-			if (getToken().getType().equals(TokenType.CONSTTK)) {
-				Decl decl = Decl();
-				compUnit.append(decl);
-				continue;
-			}
 
-			if (getToken().getType().equals(TokenType.VOIDTK)) {
-				FuncDef funcDef = FuncDef();
-				compUnit.append(funcDef);
-				continue;
-			}
-
+		// 判断条件有点乱，统一封装为函数
+		Supplier<Boolean> isDecl = ()->{
 			// 超前扫描
 			Token token0 = getToken(), token1 = getToken(1),
 					token2 = getToken(2);
+			if (token0.getType().equals(TokenType.CONSTTK))
+				return true;
+			return token0.getType().equals(TokenType.INTTK) &&
+					!token1.getType().equals(TokenType.MAINTK) &&
+					!token2.getType().equals(TokenType.LPARENT);
+		};
+		Supplier<Boolean> isFuncDef = ()->{
+			// 超前扫描
+			Token token0 = getToken(), token1 = getToken(1),
+					token2 = getToken(2);
+			if (token0.getType().equals(TokenType.VOIDTK))
+				return true;
+			return token0.getType().equals(TokenType.INTTK) &&
+					!token1.getType().equals(TokenType.MAINTK) &&
+					token2.getType().equals(TokenType.LPARENT);
+		};
+		Supplier<Boolean> isMainFuncDef = ()->{
+			// 超前扫描
+			Token token0 = getToken(), token1 = getToken(1);
+			return token0.getType().equals(TokenType.INTTK) &&
+					token1.getType().equals(TokenType.MAINTK);
+		};
 
-			if (token0.getType().equals(TokenType.INTTK)) {
-				if (token1.getType().equals(TokenType.MAINTK)) {
-					MainFuncDef mainFuncDef = MainFuncDef();
-					compUnit.append(mainFuncDef);
-					break;
-				}
+		while (isDecl.get()) {
+			Decl decl = Decl();
+			compUnit.append(decl);
+		}
 
-				if (token2.getType().equals(TokenType.LPARENT)) {
-					FuncDef funcDef = FuncDef();
-					compUnit.append(funcDef);
-					continue;
-				}
+		while (isFuncDef.get()) {
+			FuncDef funcDef = FuncDef();
+			compUnit.append(funcDef);
+		}
 
-				Decl decl = Decl();
-				compUnit.append(decl);
-				continue;
-			}
+		if (!isMainFuncDef.get()) {
 			// TODO 抛出异常
 			return null;
 		}
+		MainFuncDef mainFuncDef = MainFuncDef();
+		compUnit.append(mainFuncDef);
+
 		if (position < tokens.size()) {
 			// TODO 抛出异常
 			return null;
 		}
+
 		return compUnit;
 	}
 
