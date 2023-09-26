@@ -1,5 +1,7 @@
+import AST.ASTNode;
 import Lexical.Lexer;
 import Lexical.Token;
+import Parser.Parser;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -22,12 +24,12 @@ public class Compiler {
 		Lexer lexer = new Lexer(program.toString());
 		ArrayList<Token> tokens = lexer.analyze();
 
+		Parser parser = new Parser(tokens);
+		ASTNode root = parser.analyze();
+
 		String output = "./output.txt";
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(output))) {
-			for (Token token : tokens) {
-				writer.write(token.toString());
-				writer.newLine();
-			}
+			root.output(writer);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
