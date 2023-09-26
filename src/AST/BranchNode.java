@@ -1,5 +1,7 @@
 package AST;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -20,6 +22,15 @@ public abstract class BranchNode extends ASTNode {
 
 	public ArrayList<ASTNode> getChildren() {
 		return children;
+	}
+
+	@Override
+	public void output(BufferedWriter writer) throws IOException {
+		for (ASTNode child : children) {
+			child.output(writer);
+		}
+		writer.write("<" + this + ">");
+		writer.newLine();
 	}
 
 	@Override
