@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 /**
- * 语法树结点基类
+ * 语法树分支结点基类，所有分支结点均继承该类
  */
 public abstract class BranchNode extends ASTNode {
 	// 子结点
@@ -15,11 +15,18 @@ public abstract class BranchNode extends ASTNode {
 		children = new ArrayList<>();
 	}
 
-	// 添加子结点
+	/**
+	 * 添加子结点
+	 * @param child 子结点
+	 */
 	public void append(ASTNode child){
 		children.add(child);
 	}
 
+	/**
+	 * 获取子结点
+	 * @return 一个包含所有子结点的ArrayList
+	 */
 	public ArrayList<ASTNode> getChildren() {
 		return children;
 	}

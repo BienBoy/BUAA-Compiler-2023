@@ -7,8 +7,13 @@ import Lexical.TokenType;
 
 import java.util.ArrayList;
 
+/**
+ * 语法分析器
+ */
 public class Parser {
+	// 词法分析得到的所有token
 	private final ArrayList<Token> tokens;
+	// 当前处理到的位置
 	private int position = 0;
 
 	public Parser(ArrayList<Token> tokens) {
@@ -16,7 +21,7 @@ public class Parser {
 	}
 
 	/**
-	 * 对整个程序进行语法分析，返回生成语法树根结点
+	 * 对整个程序进行语法分析，返回生成的语法树的根结点
 	 * @return 返回生成语法树根结点
 	 */
 	public ASTNode analyze() {
@@ -49,7 +54,9 @@ public class Parser {
 		position++;
 	}
 
+	// 以下为所有非终结符的分析程序
 	private CompUnit CompUnit() {
+		// 存在一个小问题：未考虑Decl、FuncDef以及MainFuncDef的出现顺序
 		CompUnit compUnit = new CompUnit();
 		// 未获取到MainFuncDef时，循环分析
 		while (true) {
