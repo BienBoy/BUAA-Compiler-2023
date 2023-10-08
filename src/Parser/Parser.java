@@ -727,9 +727,20 @@ public class Parser {
 		// 超前扫描避免回溯
 		Token token0 = getToken(), token1 = getToken(1);
 
-		if (token0.getType().equals(TokenType.IDENFR) &&
-				(token1.getType().equals(TokenType.ASSIGN) ||
-						token1.getType().equals(TokenType.LBRACK))) {
+		// 预读到分号，若遇到=，则为LVal '=' ('getint' '(' ')' | Exp) ';'
+		boolean has_eql = false;
+		int index = 1;
+		Token temp = getToken(index);
+		while (temp.getType() != TokenType.SEMICN) {
+			if (temp.getType() == TokenType.ASSIGN) {
+				has_eql = true;
+				break;
+			}
+			index++;
+			temp = getToken(index);
+		}
+
+		if (has_eql) {
 			LVal lVal = LVal();
 			stmt.append(lVal);
 
