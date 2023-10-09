@@ -1,5 +1,7 @@
 package Lexical;
 
+import CompilerError.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -183,7 +185,11 @@ public class Lexer {
 			return new Token(TokenType.DIV, "/", line);
 		}
 
-		// TODO 抛出错误
+		// 有不合法的字符，记录错误并跳过当前字符
+		ErrorRecord.add(new CompilerError(
+				line, ErrorType.OTHER, "不合法的字符：" + ch
+		));
+		position++;
 		return null;
 	}
 
@@ -213,6 +219,7 @@ public class Lexer {
 	 */
 	private void skipComment() {
 		char nextCh = program.charAt(++position);
+		int startLine = line; // 记录起始行号，可能在报错时使用
 		if (nextCh == '/') {
 			while (hasNext() && program.charAt(position) != '\n') {
 				position++;
@@ -232,7 +239,11 @@ public class Lexer {
 				return;
 			}
 		}
-		// TODO 抛出错误，未闭合的多行注释
+		// 记录错误，未闭合的多行注释
+		ErrorRecord.add(new CompilerError(
+				startLine, ErrorType.OTHER, "未闭合的多行注释"
+		));
+		return;
 	}
 
 	/**
@@ -275,13 +286,20 @@ public class Lexer {
 		while (program.charAt(position) != '"') {
 			char ch = program.charAt(position);
 			if (ch != 32 && ch != 33 && ch != '%' && (ch < 40 || ch > 126)) {
-				// TODO 抛出错误，不合法的字符
-				return null;
+				// 记录错误，不合法的字符
+				ErrorRecord.add(new CompilerError(
+						line, ErrorType.ILLEGAL_CHAR, "格式字符串中出现非法字符：" + ch
+				));
+				position++;
+				continue;
 			}
 			word.append(ch);
 			position++;
 			if (!hasNext()) {
-				// TODO 抛出错误，字符串未闭合
+				// 记录错误，字符串未闭合
+				ErrorRecord.add(new CompilerError(
+						line, ErrorType.OTHER, "字符串未闭合"
+				));
 				return null;
 			}
 		}

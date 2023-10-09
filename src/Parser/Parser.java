@@ -2,6 +2,7 @@ package Parser;
 
 import AST.*;
 import AST.Number;
+import CompilerError.*;
 import Lexical.Token;
 import Lexical.TokenType;
 
@@ -16,6 +17,9 @@ public class Parser {
 	private final ArrayList<Token> tokens;
 	// 当前处理到的位置
 	private int position = 0;
+
+	// 记录当前循环嵌套层数，使用continue、break时，应不为0
+	private int loop = 0;
 
 	public Parser(ArrayList<Token> tokens) {
 		this.tokens = tokens;
@@ -98,15 +102,23 @@ public class Parser {
 		}
 
 		if (!isMainFuncDef.get()) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "顺序应为{Decl} {FuncDef} MainFuncDef"
+			));
+			while (!isMainFuncDef.get()) {
+				nextToken();
+			}
 		}
 		MainFuncDef mainFuncDef = MainFuncDef();
 		compUnit.append(mainFuncDef);
 
 		if (position < tokens.size()) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "多余的内容"
+			));
+			return compUnit;
 		}
 
 		return compUnit;
@@ -127,7 +139,10 @@ public class Parser {
 	private ConstDecl ConstDecl() {
 		ConstDecl constDecl = new ConstDecl();
 		if (!getToken().getType().equals(TokenType.CONSTTK)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "缺少const"
+			));
 			return null;
 		}
 		constDecl.append(new LeafNode(getToken()));
@@ -148,8 +163,11 @@ public class Parser {
 		}
 
 		if (!getToken().getType().equals(TokenType.SEMICN)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+			));
+			return constDecl;
 		}
 		constDecl.append(new LeafNode(getToken()));
 		nextToken();
@@ -160,7 +178,10 @@ public class Parser {
 	private BType BType() {
 		BType bType = new BType();
 		if (!getToken().getType().equals(TokenType.INTTK)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为int"
+			));
 			return null;
 		}
 		bType.append(new LeafNode(getToken()));
@@ -172,7 +193,10 @@ public class Parser {
 		ConstDef constDef = new ConstDef();
 
 		if (!getToken().getType().equals(TokenType.IDENFR)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为标识符"
+			));
 			return null;
 		}
 		constDef.append(new LeafNode(getToken()));
@@ -186,16 +210,22 @@ public class Parser {
 			constDef.append(constExp);
 
 			if (!getToken().getType().equals(TokenType.RBRACK)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_BRACKET, "缺少右中括号']'"
+				));
+			} else {
+				constDef.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			constDef.append(new LeafNode(getToken()));
-			nextToken();
 		}
 
 		if (!getToken().getType().equals(TokenType.ASSIGN)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.OTHER, "定义常量时缺少赋值"
+			));
+			return constDef;
 		}
 		constDef.append(new LeafNode(getToken()));
 		nextToken();
@@ -231,8 +261,11 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.RBRACE)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.OTHER, "缺少右大括号'}'"
+				));
+				return constInitVal;
 			}
 			constInitVal.append(new LeafNode(getToken()));
 			nextToken();
@@ -264,8 +297,11 @@ public class Parser {
 		}
 
 		if (!getToken().getType().equals(TokenType.SEMICN)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+			));
+			return varDecl;
 		}
 		varDecl.append(new LeafNode(getToken()));
 		nextToken();
@@ -277,7 +313,10 @@ public class Parser {
 		VarDef varDef = new VarDef();
 
 		if (!getToken().getType().equals(TokenType.IDENFR)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为标识符"
+			));
 			return null;
 		}
 		varDef.append(new LeafNode(getToken()));
@@ -291,11 +330,14 @@ public class Parser {
 			varDef.append(constExp);
 
 			if (!getToken().getType().equals(TokenType.RBRACK)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_BRACKET, "缺少右中括号']'"
+				));
+			} else {
+				varDef.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			varDef.append(new LeafNode(getToken()));
-			nextToken();
 		}
 
 		if (getToken().getType().equals(TokenType.ASSIGN)) {
@@ -334,8 +376,11 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.RBRACE)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.OTHER, "缺少右大括号'}'"
+				));
+				return initVal;
 			}
 			initVal.append(new LeafNode(getToken()));
 			nextToken();
@@ -356,18 +401,24 @@ public class Parser {
 		funcDef.append(funcType);
 
 		if (!getToken().getType().equals(TokenType.IDENFR)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为标识符"
+			));
 			return null;
 		}
 		funcDef.append(new LeafNode(getToken()));
 		nextToken();
 
 		if (!getToken().getType().equals(TokenType.LPARENT)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "缺少左小括号'('"
+			));
+		} else {
+			funcDef.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		funcDef.append(new LeafNode(getToken()));
-		nextToken();
 
 		if (getToken().getType().equals(TokenType.RPARENT)) {
 			funcDef.append(new LeafNode(getToken()));
@@ -377,11 +428,14 @@ public class Parser {
 			funcDef.append(funcFParams);
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+				));
+			} else {
+				funcDef.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			funcDef.append(new LeafNode(getToken()));
-			nextToken();
 		}
 
 		Block block = Block();
@@ -394,32 +448,44 @@ public class Parser {
 		MainFuncDef mainFuncDef = new MainFuncDef();
 
 		if (!getToken().getType().equals(TokenType.INTTK)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.OTHER, "应为int')'"
+			));
 			return null;
 		}
 		mainFuncDef.append(new LeafNode(getToken()));
 		nextToken();
 
 		if (!getToken().getType().equals(TokenType.MAINTK)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.OTHER, "应为main')'"
+			));
 			return null;
 		}
 		mainFuncDef.append(new LeafNode(getToken()));
 		nextToken();
 
 		if (!getToken().getType().equals(TokenType.LPARENT)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "缺少左小括号'('"
+			));
+		} else {
+			mainFuncDef.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		mainFuncDef.append(new LeafNode(getToken()));
-		nextToken();
 
 		if (!getToken().getType().equals(TokenType.RPARENT)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+			));
+		} else {
+			mainFuncDef.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		mainFuncDef.append(new LeafNode(getToken()));
-		nextToken();
 
 		Block block = Block();
 		mainFuncDef.append(block);
@@ -442,8 +508,11 @@ public class Parser {
 			return funcType;
 		}
 
-		// TODO 抛出异常
-		return null;
+		// 记录错误
+		ErrorRecord.add(new CompilerError(
+				getToken(-1).getLine(), ErrorType.OTHER, "不合法的函数返回值类型')'"
+		));
+		return funcType;
 	}
 
 	private FuncFParams FuncFParams() {
@@ -470,7 +539,10 @@ public class Parser {
 		funcFParam.append(bType);
 
 		if (!getToken().getType().equals(TokenType.IDENFR)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为标识符"
+			));
 			return null;
 		}
 		funcFParam.append(new LeafNode(getToken()));
@@ -481,11 +553,14 @@ public class Parser {
 			nextToken();
 
 			if (!getToken().getType().equals(TokenType.RBRACK)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_BRACKET, "缺少右中括号']'"
+				));
+			} else {
+				funcFParam.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			funcFParam.append(new LeafNode(getToken()));
-			nextToken();
 
 			while (getToken().getType().equals(TokenType.LBRACK)) {
 				funcFParam.append(new LeafNode(getToken()));
@@ -495,11 +570,14 @@ public class Parser {
 				funcFParam.append(constExp);
 
 				if (!getToken().getType().equals(TokenType.RBRACK)) {
-					// TODO 抛出异常
-					return null;
+					// 记录错误
+					ErrorRecord.add(new CompilerError(
+							getToken(-1).getLine(), ErrorType.MISSING_BRACKET, "缺少右中括号']'"
+					));
+				} else {
+					funcFParam.append(new LeafNode(getToken()));
+					nextToken();
 				}
-				funcFParam.append(new LeafNode(getToken()));
-				nextToken();
 			}
 		}
 
@@ -510,11 +588,14 @@ public class Parser {
 		Block block = new Block();
 
 		if (!getToken().getType().equals(TokenType.LBRACE)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "缺少左大括号'{'"
+			));
+		} else {
+			block.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		block.append(new LeafNode(getToken()));
-		nextToken();
 
 		while (!getToken().getType().equals(TokenType.RBRACE)) {
 			BlockItem blockItem = BlockItem();
@@ -557,21 +638,27 @@ public class Parser {
 			nextToken();
 
 			if (!getToken().getType().equals(TokenType.LPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken().getLine(), ErrorType.OTHER, "缺少左小括号'('"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			Cond cond = Cond();
 			stmt.append(cond);
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			Stmt stmt1 = Stmt();
 			stmt.append(stmt1);
@@ -592,11 +679,14 @@ public class Parser {
 			nextToken();
 
 			if (!getToken().getType().equals(TokenType.LPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken().getLine(), ErrorType.OTHER, "缺少左小括号'('"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
 				ForStmt forStmt = ForStmt();
@@ -604,11 +694,14 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
 				Cond cond = Cond();
@@ -616,11 +709,14 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
 				ForStmt forStmt = ForStmt();
@@ -628,26 +724,44 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
+			// 进入循环
+			loop++;
 			Stmt stmt1 = Stmt();
 			stmt.append(stmt1);
+			loop--;
 
 			return stmt;
 		}
 
 		if (getToken().getType().equals(TokenType.BREAKTK) ||
 				getToken().getType().equals(TokenType.CONTINUETK)) {
+			if (loop == 0) {
+				// loop为0表示不是在循环中使用的break或continue
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken().getLine(), ErrorType.INCORRECT_BREAK_CONTINUE,
+						"在非循环块中使用了break或continue语句"
+				));
+			}
+
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+				));
+				return stmt;
 			}
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
@@ -665,8 +779,11 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+				));
+				return stmt;
 			}
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
@@ -675,24 +792,47 @@ public class Parser {
 		}
 
 		if (getToken().getType().equals(TokenType.PRINTFTK)) {
+			int printfLine = getToken().getLine(); // 记录printf所在行号，报错时可能使用
+
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
 
 			if (!getToken().getType().equals(TokenType.LPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken().getLine(), ErrorType.OTHER, "缺少左小括号'('"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
+
+			// 格式化字符串中的参数个数
+			int params_num = 0;
 
 			if (!getToken().getType().equals(TokenType.STRCON)) {
-				// TODO 抛出异常
-				return null;
+				ErrorRecord.add(new CompilerError(
+						getToken().getLine(), ErrorType.OTHER, "应为格式化字符串"
+				));
+			} else {
+				// 简单计算参数数量，假设%只与d同时出现
+				String str = getToken().getRawString();
+				for (int i = 0; i < str.length() - 1;) {
+					if (str.charAt(i) == '%' && str.charAt(i+1) == 'd') {
+						params_num++;
+						i += 2;
+						continue;
+					}
+					i++;
+				}
+
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			while (getToken().getType().equals(TokenType.COMMA)) {
+				params_num--;
+
 				stmt.append(new LeafNode(getToken()));
 				nextToken();
 
@@ -700,16 +840,30 @@ public class Parser {
 				stmt.append(exp);
 			}
 
-			if (!getToken().getType().equals(TokenType.RPARENT)) {
-				// TODO 抛出异常
-				return null;
+			if (params_num != 0) {
+				// 记录错误，printf中格式化字符串参数个数与表达式个数不匹配
+				ErrorRecord.add(new CompilerError(
+						printfLine, ErrorType.MISMATCHED_PRINTF_ARGS_NUM,
+						"printf中格式化字符串参数个数与表达式个数不匹配"
+				));
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
+
+			if (!getToken().getType().equals(TokenType.RPARENT)) {
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+				));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
+			}
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+				));
+				return stmt;
 			}
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
@@ -723,9 +877,6 @@ public class Parser {
 
 			return stmt;
 		}
-
-		// 超前扫描避免回溯
-		Token token0 = getToken(), token1 = getToken(1);
 
 		// 预读到分号，若遇到=，则为LVal '=' ('getint' '(' ')' | Exp) ';'
 		boolean has_eql = false;
@@ -752,26 +903,34 @@ public class Parser {
 				nextToken();
 
 				if (!getToken().getType().equals(TokenType.LPARENT)) {
-					// TODO 抛出异常
-					return null;
+					// 记录错误
+					ErrorRecord.add(new CompilerError(
+							getToken().getLine(), ErrorType.OTHER, "缺少左小括号'('"
+					));
+				} else {
+					stmt.append(new LeafNode(getToken()));
+					nextToken();
 				}
-				stmt.append(new LeafNode(getToken()));
-				nextToken();
 
 				if (!getToken().getType().equals(TokenType.RPARENT)) {
-					// TODO 抛出异常
-					return null;
+					// 记录错误
+					ErrorRecord.add(new CompilerError(
+							getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+					));
+				} else {
+					stmt.append(new LeafNode(getToken()));
+					nextToken();
 				}
-				stmt.append(new LeafNode(getToken()));
-				nextToken();
 			} else {
 				Exp exp = Exp();
 				stmt.append(exp);
 			}
 
 			if (!getToken().getType().equals(TokenType.SEMICN)) {
-				// TODO 抛出异常
-				return null;
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+				));
+				return stmt;
 			}
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
@@ -783,8 +942,11 @@ public class Parser {
 		stmt.append(exp);
 
 		if (!getToken().getType().equals(TokenType.SEMICN)) {
-			// TODO 抛出异常
-			return null;
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
+			));
+			return stmt;
 		}
 		stmt.append(new LeafNode(getToken()));
 		nextToken();
@@ -799,11 +961,13 @@ public class Parser {
 		forStmt.append(lVal);
 
 		if (!getToken().getType().equals(TokenType.ASSIGN)) {
-			// TODO 抛出异常
-			return null;
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为'='"
+			));
+		} else {
+			forStmt.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		forStmt.append(new LeafNode(getToken()));
-		nextToken();
 
 		Exp exp = Exp();
 		forStmt.append(exp);
@@ -833,7 +997,10 @@ public class Parser {
 		LVal lVal = new LVal();
 
 		if (!getToken().getType().equals(TokenType.IDENFR)) {
-			// TODO 抛出异常
+			// 记录错误
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为标识符"
+			));
 			return null;
 		}
 		lVal.append(new LeafNode(getToken()));
@@ -847,11 +1014,14 @@ public class Parser {
 			lVal.append(exp);
 
 			if (!getToken().getType().equals(TokenType.RBRACK)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_BRACKET, "缺少右中括号']'"
+				));
+			} else {
+				lVal.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			lVal.append(new LeafNode(getToken()));
-			nextToken();
 		}
 
 		return lVal;
@@ -868,8 +1038,11 @@ public class Parser {
 			primaryExp.append(exp);
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+				));
+				return primaryExp;
 			}
 			primaryExp.append(new LeafNode(getToken()));
 			nextToken();
@@ -894,8 +1067,10 @@ public class Parser {
 		Number number = new Number();
 
 		if (!getToken().getType().equals(TokenType.INTCON)) {
-			// TODO 抛出异常
-			return null;
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "应为数字常量"
+			));
+			return number;
 		}
 		number.append(new LeafNode(getToken()));
 		nextToken();
@@ -934,8 +1109,11 @@ public class Parser {
 			}
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
-				// TODO 抛出异常
-				return null;
+				// 记录错误
+				ErrorRecord.add(new CompilerError(
+						getToken(-1).getLine(), ErrorType.MISSING_PARENTHESIS, "缺少右小括号')'"
+				));
+				return unaryExp;
 			}
 			unaryExp.append(new LeafNode(getToken()));
 			nextToken();
@@ -955,11 +1133,14 @@ public class Parser {
 		if (!getToken().getType().equals(TokenType.PLUS) &&
 				!getToken().getType().equals(TokenType.MINU) &&
 				!getToken().getType().equals(TokenType.NOT)) {
-			// TODO 抛出异常
+			ErrorRecord.add(new CompilerError(
+					getToken().getLine(), ErrorType.OTHER, "不合法的字符，应为'+'、'-'或'!'"
+			));
 			return null;
+		} else {
+			unaryOp.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		unaryOp.append(new LeafNode(getToken()));
-		nextToken();
 
 		return unaryOp;
 	}
