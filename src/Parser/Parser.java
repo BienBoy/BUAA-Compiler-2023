@@ -27,6 +27,7 @@ public class Parser {
 
 	/**
 	 * 对整个程序进行语法分析，返回生成的语法树的根结点
+	 *
 	 * @return 返回生成语法树根结点
 	 */
 	public ASTNode analyze() {
@@ -35,6 +36,7 @@ public class Parser {
 
 	/**
 	 * 获取将要分析的TOKEN
+	 *
 	 * @return 将要分析的TOKEN
 	 */
 	private Token getToken() {
@@ -44,6 +46,7 @@ public class Parser {
 
 	/**
 	 * 预读TOKEN
+	 *
 	 * @param offset 偏移
 	 * @return 预读的TOKEN
 	 */
@@ -64,7 +67,7 @@ public class Parser {
 		CompUnit compUnit = new CompUnit();
 
 		// 判断条件有点乱，统一封装为函数
-		Supplier<Boolean> isDecl = ()->{
+		Supplier<Boolean> isDecl = () -> {
 			// 超前扫描
 			Token token0 = getToken(), token1 = getToken(1),
 					token2 = getToken(2);
@@ -74,7 +77,7 @@ public class Parser {
 					!token1.getType().equals(TokenType.MAINTK) &&
 					!token2.getType().equals(TokenType.LPARENT);
 		};
-		Supplier<Boolean> isFuncDef = ()->{
+		Supplier<Boolean> isFuncDef = () -> {
 			// 超前扫描
 			Token token0 = getToken(), token1 = getToken(1),
 					token2 = getToken(2);
@@ -84,7 +87,7 @@ public class Parser {
 					!token1.getType().equals(TokenType.MAINTK) &&
 					token2.getType().equals(TokenType.LPARENT);
 		};
-		Supplier<Boolean> isMainFuncDef = ()->{
+		Supplier<Boolean> isMainFuncDef = () -> {
 			// 超前扫描
 			Token token0 = getToken(), token1 = getToken(1);
 			return token0.getType().equals(TokenType.INTTK) &&
@@ -773,7 +776,11 @@ public class Parser {
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
 
-			if (!getToken().getType().equals(TokenType.SEMICN)) {
+			TokenType type = getToken().getType();
+
+			if (type.equals(TokenType.PLUS) || type.equals(TokenType.MINU) ||
+					type.equals(TokenType.IDENFR) || type.equals(TokenType.LPARENT) ||
+					type.equals(TokenType.INTCON)) {
 				Exp exp = Exp();
 				stmt.append(exp);
 			}
@@ -817,8 +824,8 @@ public class Parser {
 			} else {
 				// 简单计算参数数量，假设%只与d同时出现
 				String str = getToken().getRawString();
-				for (int i = 0; i < str.length() - 1;) {
-					if (str.charAt(i) == '%' && str.charAt(i+1) == 'd') {
+				for (int i = 0; i < str.length() - 1; ) {
+					if (str.charAt(i) == '%' && str.charAt(i + 1) == 'd') {
 						params_num++;
 						i += 2;
 						continue;
