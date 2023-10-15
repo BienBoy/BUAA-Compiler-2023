@@ -6,9 +6,11 @@ import java.util.TreeSet;
 
 public class ErrorRecord {
 	private static TreeSet<CompilerError> errors = new TreeSet<>();
+	private static boolean working = true;
 
 	public static void add(CompilerError error) {
-		errors.add(error);
+		if (working)
+			errors.add(error);
 	}
 
 	public static TreeSet<CompilerError> getErrors() {
@@ -25,5 +27,13 @@ public class ErrorRecord {
 //			writer.write(" " + error.getDetail());
 			writer.newLine();
 		}
+	}
+
+	public static void open() {
+		working = true;
+	}
+
+	public static void close() {
+		working = false;
 	}
 }

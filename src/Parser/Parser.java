@@ -973,30 +973,16 @@ public class Parser {
 			return stmt;
 		}
 
-		// TODO 回溯解决可能遇到的缺失分号的问题
-		if (getToken().getType().equals(TokenType.SEMICN)) {
-			stmt = new StmtExp();
 
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
+		// 回溯
+		int backup = position;
+		ErrorRecord.close(); // 暂时关闭错误记录器
+		LVal();
+		boolean is_assign = getToken().getType().equals(TokenType.ASSIGN);
+		position = backup;  // 回溯至原来位置
+		ErrorRecord.open(); // 重新启用错误记录器
 
-			return stmt;
-		}
-
-		// 预读到分号，若遇到=，则为LVal '=' ('getint' '(' ')' | Exp) ';'
-		boolean has_eql = false;
-		int index = 1;
-		Token temp = getToken(index);
-		while (temp.getType() != TokenType.SEMICN) {
-			if (temp.getType() == TokenType.ASSIGN) {
-				has_eql = true;
-				break;
-			}
-			index++;
-			temp = getToken(index);
-		}
-
-		if (has_eql) {
+		if (is_assign) {
 			stmt = new StmtAssign();
 
 			LVal lVal = LVal();
@@ -1051,8 +1037,13 @@ public class Parser {
 		}
 
 		stmt = new StmtExp();
-		Exp exp = Exp();
-		stmt.append(exp);
+		TokenType type = getToken().getType();
+		if (type.equals(TokenType.IDENFR) || type.equals(TokenType.PLUS) ||
+				type.equals(TokenType.MINU) || type.equals(TokenType.LPARENT) ||
+				type.equals(TokenType.INTCON)) {
+			Exp exp = Exp();
+			stmt.append(exp);
+		}
 
 		if (!getToken().getType().equals(TokenType.SEMICN)) {
 			// 记录错误
