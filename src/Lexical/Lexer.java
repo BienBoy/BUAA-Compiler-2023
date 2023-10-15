@@ -285,13 +285,18 @@ public class Lexer {
 		position++;
 		while (program.charAt(position) != '"') {
 			char ch = program.charAt(position);
+			char nextCh = position + 1 < program.length() ? program.charAt(position + 1) : '\0';
 			if (ch != 32 && ch != 33 && ch != '%' && (ch < 40 || ch > 126)) {
 				// 记录错误，不合法的字符
 				ErrorRecord.add(new CompilerError(
 						line, ErrorType.ILLEGAL_CHAR, "格式字符串中出现非法字符：" + ch
 				));
-				position++;
-				continue;
+			}
+			if (ch == '\\' && nextCh != 'n' || ch == '%' && nextCh != 'd') {
+				// 转义字符仅有\n，%仅能与d合用
+				ErrorRecord.add(new CompilerError(
+						line, ErrorType.ILLEGAL_CHAR, "格式字符串中出现非法字符：" + ch
+				));
 			}
 			word.append(ch);
 			position++;

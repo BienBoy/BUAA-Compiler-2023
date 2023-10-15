@@ -1,5 +1,7 @@
 package AST;
 
+import SymbolTable.SymbolTable;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 
@@ -13,4 +15,5 @@ public abstract class ASTNode {
 	 * @throws IOException 输出出错
 	 */
 	public abstract void output(BufferedWriter writer) throws IOException;
+	public abstract void check(SymbolTable symbolTable);
 }

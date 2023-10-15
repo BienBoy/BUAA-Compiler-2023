@@ -1,4 +1,9 @@
 package AST;
 
-public class ConstExp extends BranchNode {
+public class ConstExp extends BranchNode implements Calculable {
+	@Override
+	public int calculate() {
+		// ConstExp只有一个AddExp类型的子结点，直接调用子节点的calculate方法
+		return ((Calculable)children.get(0)).calculate();
+	}
 }

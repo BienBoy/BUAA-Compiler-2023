@@ -1,5 +1,7 @@
 package AST;
 
+import SymbolTable.SymbolTable;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,6 +22,9 @@ public abstract class BranchNode extends ASTNode {
 	 * @param child 子结点
 	 */
 	public void append(ASTNode child){
+		if (child == null) {
+			return;
+		}
 		children.add(child);
 	}
 
@@ -38,6 +43,13 @@ public abstract class BranchNode extends ASTNode {
 		}
 		writer.write("<" + this + ">");
 		writer.newLine();
+	}
+
+	@Override
+	public void check(SymbolTable symbolTable) {
+		for (ASTNode child : children) {
+			child.check(symbolTable);
+		}
 	}
 
 	@Override

@@ -1,4 +1,8 @@
 package AST;
 
-public class Stmt extends BranchNode {
+public abstract class Stmt extends BranchNode {
+	@Override
+	public String toString() {
+		return "Stmt";
+	}
 }
