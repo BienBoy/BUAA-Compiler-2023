@@ -983,6 +983,7 @@ public class Parser {
 		ErrorRecord.open(); // 重新启用错误记录器
 
 		if (is_assign) {
+			// 假设为Stmt → LVal '=' Exp ';'
 			stmt = new StmtAssign();
 
 			LVal lVal = LVal();
@@ -992,6 +993,11 @@ public class Parser {
 			nextToken();
 
 			if (getToken().getType().equals(TokenType.GETINTTK)) {
+				// 实际为Stmt → LVal '=' 'getint''('')'';'
+				Stmt temp = new StmtGetInt();
+				stmt.getChildren().forEach(temp::append);
+				stmt = temp;
+				
 				stmt.append(new LeafNode(getToken()));
 				nextToken();
 
