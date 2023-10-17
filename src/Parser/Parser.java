@@ -886,8 +886,6 @@ public class Parser {
 		if (getToken().getType().equals(TokenType.PRINTFTK)) {
 			stmt = new StmtPrintf();
 
-			int printfLine = getToken().getLine(); // 记录printf所在行号，报错时可能使用
-
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
 
@@ -903,9 +901,6 @@ public class Parser {
 				nextToken();
 			}
 
-			// 格式化字符串中的参数个数
-			int params_num = 0;
-
 			if (!getToken().getType().equals(TokenType.STRCON)) {
 				ErrorRecord.add(new CompilerError(
 						getToken().getLine(), ErrorType.OTHER, "应为格式化字符串"
@@ -913,37 +908,16 @@ public class Parser {
 				// 忽略错误，补全分号，继续运行
 				stmt.append(new LeafNode(new Token(TokenType.STRCON, "", getToken().getLine())));
 			} else {
-				// 简单计算参数数量，假设%只与d同时出现
-				String str = getToken().getRawString();
-				for (int i = 0; i < str.length() - 1; ) {
-					if (str.charAt(i) == '%' && str.charAt(i + 1) == 'd') {
-						params_num++;
-						i += 2;
-						continue;
-					}
-					i++;
-				}
-
 				stmt.append(new LeafNode(getToken()));
 				nextToken();
 			}
 
 			while (getToken().getType().equals(TokenType.COMMA)) {
-				params_num--;
-
 				stmt.append(new LeafNode(getToken()));
 				nextToken();
 
 				Exp exp = Exp();
 				stmt.append(exp);
-			}
-
-			if (params_num != 0) {
-				// 记录错误，printf中格式化字符串参数个数与表达式个数不匹配
-				ErrorRecord.add(new CompilerError(
-						printfLine, ErrorType.MISMATCHED_PRINTF_ARGS_NUM,
-						"printf中格式化字符串参数个数与表达式个数不匹配"
-				));
 			}
 
 			if (!getToken().getType().equals(TokenType.RPARENT)) {
