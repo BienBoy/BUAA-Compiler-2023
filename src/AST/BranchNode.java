@@ -25,6 +25,7 @@ public abstract class BranchNode extends ASTNode {
 		if (child == null) {
 			return;
 		}
+		child.parent = this;
 		children.add(child);
 	}
 

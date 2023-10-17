@@ -18,9 +18,6 @@ public class Parser {
 	// 当前处理到的位置
 	private int position = 0;
 
-	// 记录当前循环嵌套层数，使用continue、break时，应不为0
-	private int loop = 0;
-
 	public Parser(ArrayList<Token> tokens) {
 		this.tokens = tokens;
 	}
@@ -811,11 +808,8 @@ public class Parser {
 				nextToken();
 			}
 
-			// 进入循环
-			loop++;
 			Stmt stmt1 = Stmt();
 			stmt.append(stmt1);
-			loop--;
 
 			return stmt;
 		}
@@ -826,15 +820,6 @@ public class Parser {
 				stmt = new StmtBreak();
 			} else {
 				stmt = new StmtContinue();
-			}
-
-			if (loop == 0) {
-				// loop为0表示不是在循环中使用的break或continue
-				// 记录错误
-				ErrorRecord.add(new CompilerError(
-						getToken().getLine(), ErrorType.INCORRECT_BREAK_CONTINUE,
-						"在非循环块中使用了break或continue语句"
-				));
 			}
 
 			stmt.append(new LeafNode(getToken()));
