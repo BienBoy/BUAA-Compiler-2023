@@ -997,7 +997,7 @@ public class Parser {
 				Stmt temp = new StmtGetInt();
 				stmt.getChildren().forEach(temp::append);
 				stmt = temp;
-				
+
 				stmt.append(new LeafNode(getToken()));
 				nextToken();
 

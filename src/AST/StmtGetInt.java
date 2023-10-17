@@ -1,7 +1,7 @@
 package AST;
 
 import CompilerError.*;
-import SymbolTable.SymbolTable;
+import SymbolTable.*;
 
 public class StmtGetInt extends Stmt {
 	@Override
@@ -15,6 +15,15 @@ public class StmtGetInt extends Stmt {
 					lVal.getIdentLine(),
 					ErrorType.MODIFIED_CONSTANT,
 					lVal.getIdentName() + "不是可修改的左值"
+			));
+		}
+		Class<?> type = lVal.getType();
+		if (type != Variable.class) {
+			// 错误：直接给数组赋值
+			ErrorRecord.add(new CompilerError(
+					lVal.getIdentLine(),
+					ErrorType.OTHER,
+					lVal.getIdentName() + "直接给数组赋值"
 			));
 		}
 	}
