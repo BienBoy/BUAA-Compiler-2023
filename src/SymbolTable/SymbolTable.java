@@ -64,7 +64,7 @@ public class SymbolTable {
 	 * @return 是否插入成功，若为false，表示重复定义，即表内已有该标识符
 	 */
 	public boolean insert(Symbol symbol) {
-		boolean success = current.add(symbol);
+		boolean success = current.insert(symbol);
 		if (symbol instanceof Function) {
 			currentFunction = (Function) symbol;
 		}

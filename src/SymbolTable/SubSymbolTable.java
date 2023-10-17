@@ -39,7 +39,7 @@ public class SubSymbolTable {
 	 * @param symbol 要添加的符号
 	 * @return 若本层符号表中已有符号，返回false；否则返回true
 	 */
-	public boolean add(Symbol symbol) {
+	public boolean insert(Symbol symbol) {
 		if (symbols.get(symbol.getName()) != null)
 			return false;
 
