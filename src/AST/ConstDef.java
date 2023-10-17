@@ -6,6 +6,7 @@ import SymbolTable.*;
 public class ConstDef extends BranchNode {
 	@Override
 	public void check(SymbolTable symbolTable) {
+		super.check(symbolTable);
 		// 需要添加到符号表，可能有重定义错误
 		LeafNode ident = (LeafNode) children.get(0);
 		ConstInitVal constInitVal = (ConstInitVal) children.get(children.size() - 1);
@@ -60,6 +61,5 @@ public class ConstDef extends BranchNode {
 				ident.symbol = symbol;
 			}
 		}
-		super.check(symbolTable);
 	}
 }

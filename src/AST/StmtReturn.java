@@ -6,6 +6,7 @@ import SymbolTable.*;
 public class StmtReturn extends Stmt {
 	@Override
 	public void check(SymbolTable symbolTable) {
+		super.check(symbolTable);
 		// 可能出现错误：无返回值的函数存在不匹配的return语句
 		LeafNode node = (LeafNode) children.get(0);
 		Function function = symbolTable.getCurrentFunction();
@@ -26,7 +27,6 @@ public class StmtReturn extends Stmt {
 					"有返回值的函数" + function.getName() + "返回了空值"
 			));
 		}
-		super.check(symbolTable);
 	}
 
 	/**

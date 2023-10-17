@@ -6,6 +6,7 @@ import SymbolTable.*;
 public class VarDef extends BranchNode {
 	@Override
 	public void check(SymbolTable symbolTable) {
+		super.check(symbolTable);
 		int offset = 0;
 		if (children.get(children.size() - 1) instanceof InitVal) {
 			// 有初始化时，子结点比无初始化时多2个
@@ -58,6 +59,5 @@ public class VarDef extends BranchNode {
 				ident.symbol = symbol;
 			}
 		}
-		super.check(symbolTable);
 	}
 }
