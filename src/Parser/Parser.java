@@ -830,7 +830,8 @@ public class Parser {
 				ErrorRecord.add(new CompilerError(
 						getToken(-1).getLine(), ErrorType.MISSING_SEMICOLON, "缺少分号"
 				));
-				return stmt;
+				// 忽略错误，补全分号，继续运行
+				stmt.append(new LeafNode(new Token(TokenType.SEMICN, ";", getToken().getLine())));
 			}
 			stmt.append(new LeafNode(getToken()));
 			nextToken();
