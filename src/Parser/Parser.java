@@ -39,7 +39,8 @@ public class Parser {
 	private Token getToken() {
 		// 为了回避异常，数组越界时返回一个NULL类型的Token
 		if (position >= tokens.size()) {
-			return new Token(TokenType.NULL, "", -1);
+			int line = tokens.get(tokens.size() - 1).getLine();
+			return new Token(TokenType.NULL, "", line);
 		}
 		return tokens.get(position);
 	}
@@ -53,7 +54,8 @@ public class Parser {
 	private Token getToken(int offset) {
 		// 为了回避异常，数组越界时返回一个NULL类型的Token
 		if (position + offset >= tokens.size()) {
-			return new Token(TokenType.NULL, "", -1);
+			int line = tokens.get(tokens.size() - 1).getLine();
+			return new Token(TokenType.NULL, "", line);
 		}
 		return tokens.get(position + offset);
 	}
@@ -1018,9 +1020,10 @@ public class Parser {
 			));
 			// 忽略错误，补全分号，继续运行
 			stmt.append(new LeafNode(new Token(TokenType.SEMICN, ";", getToken().getLine())));
+		} else {
+			stmt.append(new LeafNode(getToken()));
+			nextToken();
 		}
-		stmt.append(new LeafNode(getToken()));
-		nextToken();
 
 		return stmt;
 	}
