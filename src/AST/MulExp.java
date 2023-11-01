@@ -22,21 +22,24 @@ public class MulExp extends RewrittenBranchNode implements Calculable, TypeAvail
 	}
 
 	@Override
-	public int calculate() {
+	public Integer calculate() {
 		/* MulExp有1个或3个子结点，有1个子结点，则子结点为UnaryExp；
 		 *  有3个子结点，则分别为MulExp、LeafNode（+或-）和UnaryExp*/
 		if (children.size() == 1) {
 			return ((Calculable)children.get(0)).calculate();
 		}
-		int left = ((Calculable)children.get(0)).calculate();
-		int right = ((Calculable)children.get(2)).calculate();
+		Integer left = ((Calculable)children.get(0)).calculate();
+		Integer right = ((Calculable)children.get(2)).calculate();
+		if (left == null || right == null) {
+			return null;
+		}
 		TokenType type = ((LeafNode)children.get(1)).getToken().getType();
 		if (type.equals(TokenType.MULT)) {
 			// 操作符为*
 			return left * right;
 		}
 		if (type.equals(TokenType.DIV)) {
-			// 操作符为/
+			// 操作符为/，未考虑计算时出现0的情况
 			return left / right;
 		}
 		// 操作符为%

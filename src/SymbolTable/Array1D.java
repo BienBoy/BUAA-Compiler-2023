@@ -2,7 +2,7 @@ package SymbolTable;
 
 public class Array1D extends ConstSymbol {
 	private int shape; // 数组形状，即长度
-	private int[] value; // 常量数组的值
+	private Integer[] value; // 常量数组的值
 
 	public Array1D(String name) {
 		super(name, false);
@@ -13,13 +13,13 @@ public class Array1D extends ConstSymbol {
 		this.shape = shape;
 	}
 
-	public Array1D(String name, int shape, int[] value) {
-		super(name, true);
+	public Array1D(String name, int shape, Integer[] value, boolean constant) {
+		super(name, constant);
 		this.shape = shape;
 		this.value = value;
 	}
 
-	public int getValue(int i) {
+	public Integer getValue(int i) {
 		return value[i];
 	}
 

@@ -4,7 +4,7 @@ import SymbolTable.Variable;
 
 public class PrimaryExp extends BranchNode implements Calculable, TypeAvailable {
 	@Override
-	public int calculate() {
+	public Integer calculate() {
 		// 子结点有'(' Exp ')' | LVal | Number三种可能
 		if (children.size() == 3) {
 			// 子结点为'(' Exp ')'

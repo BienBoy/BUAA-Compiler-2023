@@ -1,17 +1,17 @@
 package SymbolTable;
 
 public class Variable extends ConstSymbol {
-	private int value; // 常量的值
+	private Integer value; // 常量的值
 	public Variable(String name) {
 		super(name, false);
 	}
 
-	public Variable(String name, int value) {
-		super(name, true);
+	public Variable(String name, Integer value, boolean constant) {
+		super(name, constant);
 		this.value = value;
 	}
 
-	public int getValue() {
+	public Integer getValue() {
 		return value;
 	}
 }

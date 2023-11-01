@@ -8,7 +8,7 @@ import java.util.ArrayList;
 
 public class UnaryExp extends BranchNode implements Calculable, TypeAvailable {
 	@Override
-	public int calculate() {
+	public Integer calculate() {
 		/*UnaryExp子结点情况有：PrimaryExp | Ident '(' [FuncRParams] ')'
 		* | UnaryOp UnaryExp*/
 		if (children.size() == 1) {
@@ -19,7 +19,10 @@ public class UnaryExp extends BranchNode implements Calculable, TypeAvailable {
 			// 子结点为UnaryOp UnaryExp
 			UnaryOp unaryOp = (UnaryOp)children.get(0);
 			TokenType type = ((LeafNode) unaryOp.children.get(0)).token.getType();
-			int value = ((Calculable)children.get(1)).calculate();
+			Integer value = ((Calculable)children.get(1)).calculate();
+			if (value == null) {
+				return null;
+			}
 			if (type.equals(TokenType.PLUS)) {
 				// 符号为+
 				return value;
@@ -29,10 +32,10 @@ public class UnaryExp extends BranchNode implements Calculable, TypeAvailable {
 				return -value;
 			}
 			// 符号为!，这种情况不应调用该函数
-			return 0;
+			return null;
 		}
 		// 子结点为Ident '(' [FuncRParams] ')'，即函数调用，不应调用函数
-		return 0;
+		return null;
 	}
 
 	@Override

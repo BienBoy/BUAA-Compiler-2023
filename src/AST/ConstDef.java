@@ -12,8 +12,8 @@ public class ConstDef extends BranchNode {
 		ConstInitVal constInitVal = (ConstInitVal) children.get(children.size() - 1);
 		if (children.size() == 3) {
 			// 普通常量
-			int value = constInitVal.calculateConstValue();
-			Symbol symbol = new Variable(ident.getToken().getRawString(), value);
+			Integer value = constInitVal.calculateConstValue();
+			Symbol symbol = new Variable(ident.getToken().getRawString(), value, true);
 			if (!symbolTable.insert(symbol)) {
 				// 重定义
 				ErrorRecord.add(new CompilerError(
@@ -27,10 +27,25 @@ public class ConstDef extends BranchNode {
 			}
 		} else if (children.size() == 6) {
 			// 一维数组
-			int shape = ((Calculable) children.get(2)).calculate();
-			int[] value = constInitVal.calculateConstArray1D(shape);
+			Integer shape = ((Calculable) children.get(2)).calculate();
+			if (shape == null) {
+				ErrorRecord.add(new CompilerError(
+						ident.token.getLine(),
+						ErrorType.OTHER,
+						"数组维度不可计算"
+				));
+				shape = 0;
+			} else if (shape <= 0) {
+				ErrorRecord.add(new CompilerError(
+						ident.token.getLine(),
+						ErrorType.OTHER,
+						"数组维度只能为正整数"
+				));
+				shape = 0;
+			}
+			Integer[] value = constInitVal.calculateConstArray1D(shape);
 			Symbol symbol = new Array1D(ident.getToken().getRawString(),
-					shape, value);
+					shape, value, true);
 			if (!symbolTable.insert(symbol)) {
 				// 重定义
 				ErrorRecord.add(new CompilerError(
@@ -44,11 +59,27 @@ public class ConstDef extends BranchNode {
 			}
 		} else {
 			// 二维数组
-			int shapeX = ((Calculable) children.get(2)).calculate();
-			int shapeY = ((Calculable) children.get(5)).calculate();
-			int[][] value = constInitVal.calculateConstArray2D(shapeX, shapeY);
+			Integer shapeX = ((Calculable) children.get(2)).calculate();
+			Integer shapeY = ((Calculable) children.get(5)).calculate();
+			if (shapeX == null || shapeY == null) {
+				ErrorRecord.add(new CompilerError(
+						ident.token.getLine(),
+						ErrorType.OTHER,
+						"数组维度不可计算"
+				));
+				shapeX = shapeX == null ? 0 : shapeX;
+				shapeY = shapeY == null ? 0 : shapeY;
+			} else if (shapeX <= 0 || shapeY <= 0) {
+				ErrorRecord.add(new CompilerError(
+						ident.token.getLine(),
+						ErrorType.OTHER,
+						"数组维度只能为正整数"
+				));
+				shapeX = shapeY = 0;
+			}
+			Integer[][] value = constInitVal.calculateConstArray2D(shapeX, shapeY);
 			Symbol symbol = new Array2D(ident.getToken().getRawString(),
-					shapeX, shapeY, value);
+					shapeX, shapeY, value, true);
 			if (!symbolTable.insert(symbol)) {
 				// 重定义
 				ErrorRecord.add(new CompilerError(

@@ -22,14 +22,17 @@ public class AddExp extends RewrittenBranchNode implements Calculable, TypeAvail
 	}
 
 	@Override
-	public int calculate() {
+	public Integer calculate() {
 		/* AddExp有1个或3个子结点，有1个子结点，则子结点为MulExp；
 		*  有3个子结点，则分别为AddExp、LeafNode（+或-）和MulExp*/
 		if (children.size() == 1) {
 			return ((Calculable)children.get(0)).calculate();
 		}
-		int left = ((Calculable)children.get(0)).calculate();
-		int right = ((Calculable)children.get(2)).calculate();
+		Integer left = ((Calculable)children.get(0)).calculate();
+		Integer right = ((Calculable)children.get(2)).calculate();
+		if (left == null || right == null) {
+			return null;
+		}
 		if (((LeafNode)children.get(1)).getToken().getType().equals(TokenType.PLUS)) {
 			// 操作符为+
 			return left + right;

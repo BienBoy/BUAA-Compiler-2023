@@ -11,7 +11,7 @@ public class LVal extends BranchNode implements Calculable, TypeAvailable {
 	 * @return 数值
 	 */
 	@Override
-	public int calculate() {
+	public Integer calculate() {
 		// 子结点为Ident {'[' Exp ']'}，需要查表
 		LeafNode ident = (LeafNode) children.get(0);
 		Symbol symbol = ident.symbol;
@@ -21,22 +21,22 @@ public class LVal extends BranchNode implements Calculable, TypeAvailable {
 		}
 		if (symbol instanceof Array1D && children.size() == 4) {
 			// 1维数组
-			int i = ((Exp) children.get(2)).calculate();
+			Integer i = ((Exp) children.get(2)).calculate();
+			if (i == null) {
+				return null;
+			}
 			return ((Array1D) symbol).getValue(i);
 		}
 		if (symbol instanceof Array2D && children.size() == 7) {
 			// 2维数组
-			int i = ((Exp) children.get(2)).calculate();
-			int j = ((Exp) children.get(5)).calculate();
+			Integer i = ((Exp) children.get(2)).calculate();
+			Integer j = ((Exp) children.get(5)).calculate();
+			if (i == null || j == null) {
+				return null;
+			}
 			return ((Array2D) symbol).getValue(i, j);
 		}
-		ErrorRecord.add(new CompilerError(
-				ident.token.getLine(),
-				ErrorType.OTHER,
-				"不可计算出数值"
-		));
-		// 忽略错误，指定值为0，继续运行
-		return 0;
+		return null;
 	}
 
 	@Override
@@ -65,6 +65,7 @@ public class LVal extends BranchNode implements Calculable, TypeAvailable {
 			}
 			return Variable.class;
 		}
+		// 函数调用按普通变量处理
 		return Variable.class;
 	}
 
