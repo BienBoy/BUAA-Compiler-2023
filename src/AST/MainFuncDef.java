@@ -14,6 +14,7 @@ public class MainFuncDef extends BranchNode {
 				null
 		);
 		symbolTable.insert(symbol);
+		ident.symbol = symbol;
 
 		super.check(symbolTable);
 
