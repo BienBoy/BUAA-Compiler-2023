@@ -20,7 +20,13 @@ public class Array1D extends ConstSymbol {
 	}
 
 	public Integer getValue(int i) {
+		if ((value == null || value[i] == null) && isGlobal())
+			return 0;
 		return value[i];
+	}
+
+	public Integer[] getValue() {
+		return value;
 	}
 
 	public int getShape() {

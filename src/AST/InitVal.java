@@ -8,7 +8,7 @@ public class InitVal extends BranchNode {
 	 * @return 普通变量的初始值，无法计算返回null
 	 */
 	public Integer calculateVarValue() {
-		// 子结点应仅有一个ConstExp
+		// 子结点应仅有一个Exp
 		if (children.size() != 1) {
 			ErrorRecord.add(new CompilerError(
 					((LeafNode)children.get(0)).getToken().getLine(),
@@ -28,8 +28,8 @@ public class InitVal extends BranchNode {
 	 * @return 1维数组
 	 */
 	public Integer[] calculateArray1D(int shapeX) {
-		// 子结点应为'{' ConstInitVal { ',' ConstInitVal } '}'
-		// 子结点中每个ConstInitVal可计算出一个int值
+		// 子结点应为'{' InitVal { ',' InitVal } '}'
+		// 子结点中每个InitVal可计算出一个int值
 		if (children.size() != 2 + shapeX * 2 - 1) {
 			ErrorRecord.add(new CompilerError(
 					((LeafNode)children.get(0)).getToken().getLine(),
@@ -52,8 +52,8 @@ public class InitVal extends BranchNode {
 	 * @return 2维常量数组
 	 */
 	public Integer[][] calculateArray2D(int shapeX, int shapeY) {
-		// 子结点应为'{' ConstInitVal { ',' ConstInitVal } '}'
-		// 子结点中每个ConstInitVal可计算出一个1维int数组
+		// 子结点应为'{' InitVal { ',' InitVal } '}'
+		// 子结点中每个InitVal可计算出一个1维int数组
 		if (children.size() != 2 + shapeX * 2 - 1) {
 			ErrorRecord.add(new CompilerError(
 					((LeafNode)children.get(0)).getToken().getLine(),

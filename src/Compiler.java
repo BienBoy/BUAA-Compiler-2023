@@ -1,13 +1,18 @@
 import AST.ASTNode;
+import AST.CompUnit;
 import CompilerError.ErrorRecord;
 import Lexical.Lexer;
 import Lexical.Token;
+import MidCode.IrBuilder;
+import MidCode.LLVMIR.IrModule;
+import Mips.MipsGenerator;
 import Parser.Parser;
 import SymbolTable.SymbolTable;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -18,6 +23,8 @@ public class Compiler {
 		String input = "./testfile.txt";
 		String output = "./output.txt";
 		String error = "./error.txt";
+		String midCode = "./llvm_ir.txt";
+		String mips = "./mips.txt";
 		StringBuilder program = new StringBuilder();
 		try (Stream<String> lines = Files.lines(Paths.get(input))) {
 			lines.forEach(line -> program.append(line).append("\n"));
@@ -40,11 +47,28 @@ public class Compiler {
 		root.check(symbolTable);
 
 		if (ErrorRecord.hasError()) {
-			try (BufferedWriter writer = new BufferedWriter(new FileWriter(error))) {
+			try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out))) {
 				ErrorRecord.output(writer);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			System.exit(-1);
+		}
+
+		IrBuilder irBuilder = new IrBuilder((CompUnit) root);
+		IrModule module = irBuilder.generate();
+
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(midCode))) {
+			module.output(writer);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(mips))) {
+			MipsGenerator mipsGenerator = new MipsGenerator(module, writer);
+			mipsGenerator.generate();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 }

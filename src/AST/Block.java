@@ -13,10 +13,10 @@ public class Block extends BranchNode {
 	}
 
 	/**
-	 * 判断Block最后一条语句是否为return语句
+	 * 判断Block最后一条语句是否为return int语句
 	 * @return Block最后一条语句是否为return语句
 	 */
-	public boolean lastReturn() {
+	public boolean lastReturnInt() {
 		if (children.size() == 2) {
 			// 空块
 			return false;
@@ -29,6 +29,17 @@ public class Block extends BranchNode {
 		}
 		// 判断返回为空
 		return !((StmtReturn) node).isVoid();
+	}
+
+	public boolean lastReturn() {
+		if (children.size() == 2) {
+			// 空块
+			return false;
+		}
+		// 最后一条语句
+		ASTNode node = ((BlockItem) children.get(children.size() - 2)).children.get(0);
+
+		return node instanceof StmtReturn;
 	}
 
 	/**

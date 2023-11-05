@@ -24,7 +24,13 @@ public class Array2D extends ConstSymbol {
 	}
 
 	public Integer getValue(int i, int j) {
+		if ((value == null || value[i][j] == null) && isGlobal())
+			return 0;
 		return value[i][j];
+	}
+
+	public Integer[][] getValue() {
+		return value;
 	}
 
 	public int getShapeX() {

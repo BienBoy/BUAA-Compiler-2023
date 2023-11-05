@@ -2,6 +2,7 @@ package SymbolTable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * 子表，一个作用域有一个
@@ -10,12 +11,12 @@ public class SubSymbolTable {
 	private final SubSymbolTable outer; // 外层符号表
 	private final ArrayList<SubSymbolTable> inner; // 内层符号表
 	private Function function; // 子表位于哪个函数内；全局的为null
-	private final HashMap<String, Symbol> symbols; // 单个符号表内的符号
+	private final LinkedHashMap<String, Symbol> symbols; // 单个符号表内的符号
 
 	public SubSymbolTable(SubSymbolTable outer, Function function) {
 		this.outer = outer;
 		this.inner = new ArrayList<>();
-		this.symbols = new HashMap<>();
+		this.symbols = new LinkedHashMap<>();
 		this.function = function;
 	}
 
@@ -44,6 +45,7 @@ public class SubSymbolTable {
 			return false;
 
 		symbols.put(symbol.getName(), symbol);
+		symbol.setSubSymbolTable(this);
 		return true;
 	}
 
@@ -61,5 +63,34 @@ public class SubSymbolTable {
 
 	public Function getFunction() {
 		return function;
+	}
+
+	/**
+	 * 获取符号表及其子表所有符号表项
+	 * @return 所有符号表项
+	 */
+	public ArrayList<Symbol> getAllSymbol() {
+		ArrayList<Symbol> symbols = new ArrayList<>(this.symbols.values());
+		for (SubSymbolTable table : inner) {
+			symbols.addAll(table.getAllSymbol());
+		}
+		return symbols;
+	}
+
+	/**
+	 * 获取符号表的子表的所有符号表项
+	 * @return 所有符号表项
+	 */
+	public ArrayList<Symbol> getAllSubSymbol(Function function) {
+		ArrayList<Symbol> symbols = new ArrayList<>();
+		for (SubSymbolTable table : inner) {
+			if (table.function == function)
+				symbols.addAll(table.getAllSymbol());
+		}
+		return symbols;
+	}
+
+	public boolean isGlobal() {
+		return outer == null;
 	}
 }

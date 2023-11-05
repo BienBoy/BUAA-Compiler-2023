@@ -12,6 +12,16 @@ public class Variable extends ConstSymbol {
 	}
 
 	public Integer getValue() {
+		if (value == null && isGlobal())
+			return 0;
 		return value;
+	}
+
+	public boolean isGlobal() {
+		return this.getSubSymbolTable().getOuter() == null;
+	}
+
+	public boolean isGlobalConst() {
+		return this.isConstant() && this.isGlobal();
 	}
 }

@@ -48,7 +48,7 @@ public class FuncDef extends BranchNode {
 		block.check(symbolTable);
 
 		// 需要检查有返回值的函数最后一条语句是否为return
-		if (hasReturn && !block.lastReturn()) {
+		if (hasReturn && !block.lastReturnInt()) {
 			// 最后一条语句不为return或返回为空
 			ErrorRecord.add(new CompilerError(
 					block.getLastLine(),

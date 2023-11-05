@@ -78,4 +78,8 @@ public class SymbolTable {
 	public Function getCurrentFunction() {
 		return currentFunction;
 	}
+
+	public boolean isGlobal() {
+		return current.isGlobal();
+	}
 }

@@ -117,6 +117,9 @@ public class Parser {
 			// 忽略错误，继续分析MainFuncDef
 			while (!isMainFuncDef.get()) {
 				nextToken();
+				if (position >= tokens.size()) {
+					return compUnit;
+				}
 			}
 		}
 		MainFuncDef mainFuncDef = MainFuncDef();
