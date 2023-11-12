@@ -47,7 +47,8 @@ public class Compiler {
 		root.check(symbolTable);
 
 		if (ErrorRecord.hasError()) {
-			try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(System.out))) {
+			ErrorRecord.print();
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(error))) {
 				ErrorRecord.output(writer);
 			} catch (IOException e) {
 				e.printStackTrace();

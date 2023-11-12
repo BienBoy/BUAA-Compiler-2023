@@ -24,8 +24,13 @@ public class ErrorRecord {
 	public static void output(BufferedWriter writer) throws IOException {
 		for (CompilerError error : errors) {
 			writer.write(error.toString());
-			writer.write(" " + error.getDetail());
 			writer.newLine();
+		}
+	}
+
+	public static void print() {
+		for (CompilerError error : errors) {
+			System.out.println(error.toString() + " " + error.getDetail());
 		}
 	}
 
