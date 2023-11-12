@@ -129,7 +129,12 @@ public class MipsGenerator {
 				if (v instanceof Alloca) {
 					sp -= ((Alloca) v).getSize();
 					v.setAddr("" + sp);
-				} else {
+				} else if (!(v instanceof Br ||
+						v instanceof Putint ||
+						v instanceof Putstr ||
+						v instanceof Ret ||
+						v instanceof Store
+				)){
 					sp -= 4;
 					v.setAddr("" + sp);
 				}
