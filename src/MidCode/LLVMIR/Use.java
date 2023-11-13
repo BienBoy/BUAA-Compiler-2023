@@ -13,4 +13,12 @@ public class Use {
 		this.user = user;
 		this.pos = pos;
 	}
+
+	public Value getValue() {
+		return value;
+	}
+
+	public User getUser() {
+		return user;
+	}
 }

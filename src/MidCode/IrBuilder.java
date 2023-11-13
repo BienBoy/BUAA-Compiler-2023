@@ -437,7 +437,7 @@ public class IrBuilder {
 			ConstInitVal constInitVal = (ConstInitVal) constDef.getChildren().get(5);
 			Array1D array = (Array1D) symbol;
 			for (int i = 0; i < array.getShape(); i++) {
-				Value address = generateGetelementptr(
+				Instruction address = generateGetelementptr(
 						symbol.getIRValue(),
 						new ConstInt(0),
 						new ConstInt(i)
@@ -453,7 +453,7 @@ public class IrBuilder {
 			Array2D array = (Array2D) symbol;
 			for (int i = 0; i < array.getShapeX(); i++) {
 				for (int j = 0; j < array.getShapeY(); j++) {
-					Value address = generateGetelementptr(
+					Instruction address = generateGetelementptr(
 							symbol.getIRValue(),
 							new ConstInt(0),
 							new ConstInt(i),
@@ -489,7 +489,7 @@ public class IrBuilder {
 			InitVal initVal = (InitVal) varDef.getChildren().get(5);
 			Array1D array = (Array1D) symbol;
 			for (int i = 0; i < array.getShape(); i++) {
-				Value address = generateGetelementptr(
+				Instruction address = generateGetelementptr(
 						symbol.getIRValue(),
 						new ConstInt(0),
 						new ConstInt(i)
@@ -505,7 +505,7 @@ public class IrBuilder {
 			Array2D array = (Array2D) symbol;
 			for (int i = 0; i < array.getShapeX(); i++) {
 				for (int j = 0; j < array.getShapeY(); j++) {
-					Value address = generateGetelementptr(
+					Instruction address = generateGetelementptr(
 							symbol.getIRValue(),
 							new ConstInt(0),
 							new ConstInt(i),
@@ -660,7 +660,7 @@ public class IrBuilder {
 		if (isPointer) {
 			// 转换指针的情况
 			// 将指针读入
-			Value address = generateLoad(symbol.getIRValue());
+			Instruction address = generateLoad(symbol.getIRValue());
 			currentBasicBlock.add(address);
 			for (ASTNode node : lVal.getChildren()) {
 				if (node instanceof Exp) {
@@ -707,20 +707,20 @@ public class IrBuilder {
 						new ConstInt(0),
 						exp
 				);
-				currentBasicBlock.add(address);
+				currentBasicBlock.add((Instruction) address);
 				dimension--;
 			}
 			if (dimension == 0) {
 				// 将元素读入
 				address = generateLoad(address);
-				currentBasicBlock.add(address);
+				currentBasicBlock.add((Instruction) address);
 			} else {
 				address = generateGetelementptr(
 						address,
 						new ConstInt(0),
 						new ConstInt(0)
 				);
-				currentBasicBlock.add(address);
+				currentBasicBlock.add((Instruction) address);
 			}
 			return address;
 		}
@@ -743,7 +743,7 @@ public class IrBuilder {
 		if (isPointer) {
 			// 转换指针的情况
 			// 将指针读入
-			Value address = generateLoad(symbol.getIRValue());
+			Instruction address = generateLoad(symbol.getIRValue());
 			currentBasicBlock.add(address);
 			int temp = 0;
 			for (ASTNode node : lVal.getChildren()) {
@@ -781,7 +781,7 @@ public class IrBuilder {
 						new ConstInt(0),
 						exp
 				);
-				currentBasicBlock.add(address);
+				currentBasicBlock.add((Instruction) address);
 			}
 
 			return address;

@@ -161,8 +161,8 @@ public class MipsGenerator {
 			writer.newLine();
 		}
 
-		ArrayList<Value> instructions = block.getValues();
-		for (Value instruction : instructions) {
+		ArrayList<Instruction> instructions = block.getValues();
+		for (Instruction instruction : instructions) {
 			if (instruction instanceof Alloca) {
 				continue;
 			} else if (instruction instanceof Store) {

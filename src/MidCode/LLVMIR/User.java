@@ -31,4 +31,10 @@ public class User extends Value {
 	public ArrayList<Value> getOperands() {
 		return operands;
 	}
+
+	public void removeUse() {
+		for (Value operand : operands) {
+			operand.useList.removeIf(use -> use.getUser().equals(this));
+		}
+	}
 }

@@ -6,6 +6,7 @@ import Lexical.Token;
 import MidCode.IrBuilder;
 import MidCode.LLVMIR.IrModule;
 import Mips.MipsGenerator;
+import Optimizer.Optimizer;
 import Parser.Parser;
 import SymbolTable.SymbolTable;
 
@@ -58,6 +59,9 @@ public class Compiler {
 
 		IrBuilder irBuilder = new IrBuilder((CompUnit) root);
 		IrModule module = irBuilder.generate();
+
+		// 优化
+		new Optimizer().optimize(module);
 
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(midCode))) {
 			module.output(writer);

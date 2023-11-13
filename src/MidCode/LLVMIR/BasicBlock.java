@@ -1,22 +1,24 @@
 package MidCode.LLVMIR;
 
+import MidCode.LLVMIR.Instruction.Instruction;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class BasicBlock extends Value {
-	private final ArrayList<Value> values; // 基本块内的指令
+	private final ArrayList<Instruction> values; // 基本块内的指令
 
 	public BasicBlock(String name) {
 		super(name);
 		values = new ArrayList<>();
 	}
 
-	public void add(Value value) {
+	public void add(Instruction value) {
 		values.add(value);
 	}
 
-	public ArrayList<Value> getValues() {
+	public ArrayList<Instruction> getValues() {
 		return values;
 	}
 
