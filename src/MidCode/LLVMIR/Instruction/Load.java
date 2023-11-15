@@ -1,5 +1,6 @@
 package MidCode.LLVMIR.Instruction;
 
+import MidCode.LLVMIR.GlobalVariable;
 import MidCode.LLVMIR.Instruction.Instruction;
 import MidCode.LLVMIR.Value;
 
@@ -23,5 +24,13 @@ public class Load extends Instruction {
 	public String getType() {
 		String type = operands.get(0).getType();
 		return type.substring(0, type.length() - 1);
+	}
+
+	public boolean isLocalVariable() {
+		return !(operands.get(0) instanceof GlobalVariable) && !(operands.get(0) instanceof Getelementptr);
+	}
+
+	public Value getVar() {
+		return operands.get(0);
 	}
 }

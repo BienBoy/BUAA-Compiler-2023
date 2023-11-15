@@ -79,4 +79,14 @@ public class Value {
 	public void setAddr(String addr) {
 		this.addr = addr;
 	}
+
+	/**
+	 * 替换所有使用本value的位置为新的value
+	 * @param value 新的value
+	 */
+	public void replaceUsed(Value value) {
+		for (Use use : useList) {
+			use.getUser().replaceUse(this, value);
+		}
+	}
 }

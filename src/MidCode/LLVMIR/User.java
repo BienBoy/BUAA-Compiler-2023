@@ -1,7 +1,6 @@
 package MidCode.LLVMIR;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class User extends Value {
 	protected final ArrayList<Value> operands; // 使用的Value
@@ -32,9 +31,26 @@ public class User extends Value {
 		return operands;
 	}
 
+	/**
+	 * 移除本value对其他值的使用
+	 */
 	public void removeUse() {
 		for (Value operand : operands) {
 			operand.useList.removeIf(use -> use.getUser().equals(this));
+		}
+	}
+
+	/**
+	 * 将使用的Value由from替换为to
+	 * @param from 要替换的Value
+	 * @param to 替换后的Value
+	 */
+	public void replaceUse(Value from, Value to) {
+		for (int i = 0; i < operands.size(); i++) {
+			if (operands.get(i).equals(from)) {
+				operands.set(i, to);
+				to.addUse(new Use(to, this, i));
+			}
 		}
 	}
 }

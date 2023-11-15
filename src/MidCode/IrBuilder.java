@@ -122,6 +122,9 @@ public class IrBuilder {
 		if (!block.lastReturn()) {
 			currentBasicBlock.add(generateRet());
 		}
+		if (currentBasicBlock.getValues().isEmpty()) {
+			currentFunction.getBasicBlocks().remove(currentFunction.getBasicBlocks().size()-1);
+		}
 	}
 	//endregion
 
@@ -439,8 +442,8 @@ public class IrBuilder {
 			for (int i = 0; i < array.getShape(); i++) {
 				Instruction address = generateGetelementptr(
 						symbol.getIRValue(),
-						new ConstInt(0),
-						new ConstInt(i)
+						generateConstInt(0),
+						generateConstInt(i)
 				);
 				currentBasicBlock.add(address);
 				ConstInitVal constInitVal2 = (ConstInitVal) constInitVal.getChildren().get(1 + 2 * i);
@@ -455,9 +458,9 @@ public class IrBuilder {
 				for (int j = 0; j < array.getShapeY(); j++) {
 					Instruction address = generateGetelementptr(
 							symbol.getIRValue(),
-							new ConstInt(0),
-							new ConstInt(i),
-							new ConstInt(j)
+							generateConstInt(0),
+							generateConstInt(i),
+							generateConstInt(j)
 					);
 					currentBasicBlock.add(address);
 					ConstInitVal constInitVal2 = (ConstInitVal) constInitVal.getChildren().get(1 + 2 * i);
@@ -491,8 +494,8 @@ public class IrBuilder {
 			for (int i = 0; i < array.getShape(); i++) {
 				Instruction address = generateGetelementptr(
 						symbol.getIRValue(),
-						new ConstInt(0),
-						new ConstInt(i)
+						generateConstInt(0),
+						generateConstInt(i)
 				);
 				currentBasicBlock.add(address);
 				InitVal initVal2 = (InitVal) initVal.getChildren().get(1 + 2 * i);
@@ -507,9 +510,9 @@ public class IrBuilder {
 				for (int j = 0; j < array.getShapeY(); j++) {
 					Instruction address = generateGetelementptr(
 							symbol.getIRValue(),
-							new ConstInt(0),
-							new ConstInt(i),
-							new ConstInt(j)
+							generateConstInt(0),
+							generateConstInt(i),
+							generateConstInt(j)
 					);
 					currentBasicBlock.add(address);
 					InitVal initVal2 = (InitVal) initVal.getChildren().get(1 + 2 * i);
@@ -593,13 +596,13 @@ public class IrBuilder {
 			}
 			if (op.getToken().getType().equals(TokenType.MINU)) {
 				// 负号转换为 0 -
-				Value left = new ConstInt(0);
+				Value left = generateConstInt(0);
 				Sub sub = generateSub(left, operand);
 				currentBasicBlock.add(sub);
 				return sub;
 			}
 			// 将 ! 转为和 0 的比较，将结果转换为i32类型，以便可以连用 !
-			Value right = new ConstInt(0);
+			Value right = generateConstInt(0);
 			Eq eq = generateEq(operand, right);
 			currentBasicBlock.add(eq);
 			Zext zext = generateZext("i1", "i32", eq);
@@ -640,7 +643,7 @@ public class IrBuilder {
 		Symbol symbol = ident.getSymbol();
 		if (symbol instanceof Variable) {
 			if (((Variable) symbol).isGlobalConst()) {
-				return new ConstInt(((Variable) symbol).getValue());
+				return generateConstInt(((Variable) symbol).getValue());
 			}
 			Load load = generateLoad(symbol.getIRValue());
 			currentBasicBlock.add(load);
@@ -668,7 +671,7 @@ public class IrBuilder {
 					Value exp = generateInstructionsFromExp((Exp) node);
 					if (dimension == 0 && symbol instanceof Array2D) {
 						address = generateGetelementptr(
-								address, new ConstInt(0), exp
+								address, generateConstInt(0), exp
 						);
 					} else {
 						address = generateGetelementptr(
@@ -685,8 +688,8 @@ public class IrBuilder {
 			} else if (address instanceof Getelementptr) {
 				address = generateGetelementptr(
 						address,
-						new ConstInt(0),
-						new ConstInt(0)
+						generateConstInt(0),
+						generateConstInt(0)
 				);
 				currentBasicBlock.add(address);
 			}
@@ -704,7 +707,7 @@ public class IrBuilder {
 			for (Value exp : exps) {
 				address = generateGetelementptr(
 						address,
-						new ConstInt(0),
+						generateConstInt(0),
 						exp
 				);
 				currentBasicBlock.add((Instruction) address);
@@ -717,8 +720,8 @@ public class IrBuilder {
 			} else {
 				address = generateGetelementptr(
 						address,
-						new ConstInt(0),
-						new ConstInt(0)
+						generateConstInt(0),
+						generateConstInt(0)
 				);
 				currentBasicBlock.add((Instruction) address);
 			}
@@ -752,7 +755,7 @@ public class IrBuilder {
 					Value exp = generateInstructionsFromExp((Exp) node);
 					if (temp == 2) {
 						address = generateGetelementptr(
-								address, new ConstInt(0), exp
+								address, generateConstInt(0), exp
 						);
 					} else {
 						address = generateGetelementptr(
@@ -778,7 +781,7 @@ public class IrBuilder {
 			for (Value exp : exps) {
 				address = generateGetelementptr(
 						address,
-						new ConstInt(0),
+						generateConstInt(0),
 						exp
 				);
 				currentBasicBlock.add((Instruction) address);
@@ -789,7 +792,7 @@ public class IrBuilder {
 	}
 
 	private Value generateInstructionsFromNumber(Number number) {
-		return new ConstInt(number.calculate());
+		return generateConstInt(number.calculate());
 	}
 
 	private ArrayList<Value> generateInstructionsFromFuncRParams(FuncRParams funcRParams) {
@@ -838,7 +841,7 @@ public class IrBuilder {
 	private void generateBrFromEqExp(EqExp eqExp, int nextType) {
 		// 生成符合短路连接的跳转方式
 		Value value = generateInstructionsFromEqExp(eqExp);
-		Value zero = new ConstInt(0);
+		Value zero = generateConstInt(0);
 		Ne ne = generateNe(value, zero);
 		currentBasicBlock.add(ne);
 
@@ -968,6 +971,11 @@ public class IrBuilder {
 		String prefix = addPrefix ? "l" : "";
 		basicBlock.setName(prefix + index);
 		index++;
+	}
+
+	// 构建ConstInt
+	private ConstInt generateConstInt(int value) {
+		return new ConstInt(value);
 	}
 
 	// 构建Alloca

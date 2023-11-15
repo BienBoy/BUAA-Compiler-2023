@@ -6,14 +6,13 @@ import Lexical.Token;
 import MidCode.IrBuilder;
 import MidCode.LLVMIR.IrModule;
 import Mips.MipsGenerator;
-import Optimizer.Optimizer;
+import Optimizer.MidCode.MidCodeOptimizer;
 import Parser.Parser;
 import SymbolTable.SymbolTable;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -60,8 +59,8 @@ public class Compiler {
 		IrBuilder irBuilder = new IrBuilder((CompUnit) root);
 		IrModule module = irBuilder.generate();
 
-		// 优化
-		new Optimizer().optimize(module);
+		// 中端优化
+		new MidCodeOptimizer().optimize(module);
 
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(midCode))) {
 			module.output(writer);

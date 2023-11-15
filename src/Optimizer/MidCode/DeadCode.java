@@ -1,10 +1,9 @@
-package Optimizer;
+package Optimizer.MidCode;
 
 import MidCode.IrRenamer;
 import MidCode.LLVMIR.*;
 import MidCode.LLVMIR.Instruction.*;
-
-import java.util.ArrayList;
+import Optimizer.BaseOptimizer;
 
 public class DeadCode extends BaseOptimizer {
 	private boolean change = true;
@@ -68,7 +67,7 @@ public class DeadCode extends BaseOptimizer {
 			if (v.getUseList().isEmpty() && (v instanceof Add ||
 					v instanceof Sub || v instanceof Mul || v instanceof Sdiv ||
 					v instanceof Srem || v instanceof Icmp || v instanceof Zext ||
-					v instanceof Load || v instanceof Alloca)) {
+					v instanceof Load || v instanceof Alloca || v instanceof Phi)) {
 				change = true;
 				v.removeUse();
 				return true;

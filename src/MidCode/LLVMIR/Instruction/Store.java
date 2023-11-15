@@ -21,4 +21,13 @@ public class Store extends Instruction {
 		writer.write("\tstore " + ltype + " " + left + ", " + rtype + " " + right);
 		writer.newLine();
 	}
+
+	public Value getNewValue() {
+		return operands.get(0);
+	}
+
+	public boolean isLocalVariable() {
+		return !(operands.get(1) instanceof GlobalVariable) &&
+				!(operands.get(1) instanceof Getelementptr);
+	}
 }

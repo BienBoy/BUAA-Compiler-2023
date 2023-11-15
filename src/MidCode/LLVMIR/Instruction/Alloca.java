@@ -74,4 +74,8 @@ public class Alloca extends Instruction {
 			return 4;
 		}
 	}
+
+	public boolean isLocalVariable() {
+		return symbol instanceof Variable || getType().endsWith("**");
+	}
 }
