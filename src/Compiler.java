@@ -6,6 +6,7 @@ import Lexical.Token;
 import MidCode.IrBuilder;
 import MidCode.LLVMIR.IrModule;
 import Mips.MipsGenerator;
+import Mips.MipsGeneratorWithOptimization;
 import Optimizer.MidCode.MidCodeOptimizer;
 import Parser.Parser;
 import SymbolTable.SymbolTable;
@@ -69,7 +70,7 @@ public class Compiler {
 		}
 
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(mips))) {
-			MipsGenerator mipsGenerator = new MipsGenerator(module, writer);
+			MipsGeneratorWithOptimization mipsGenerator = new MipsGeneratorWithOptimization(module, writer);
 			mipsGenerator.generate();
 		} catch (IOException e) {
 			e.printStackTrace();

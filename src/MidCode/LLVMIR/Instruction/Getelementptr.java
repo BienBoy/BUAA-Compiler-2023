@@ -1,5 +1,6 @@
 package MidCode.LLVMIR.Instruction;
 
+import MidCode.LLVMIR.FunctionParam;
 import MidCode.LLVMIR.Value;
 import SymbolTable.Array1D;
 import SymbolTable.Array2D;
@@ -59,7 +60,32 @@ public class Getelementptr extends Instruction {
 	// 获取指定层的大小
 	public int getSize(int layer) {
 		Value operand = operands.get(0);
-		if (operand.getSymbol() instanceof Array1D) {
+		if (operand instanceof Load || operand instanceof FunctionParam) {
+			// 操作对象为指针
+			Value value = null;
+			if (operand instanceof Load) {
+				value = ((Load) operand).getOperands().get(0);
+			} else {
+				value = operand;
+			}
+			if (value.getSymbol() instanceof Array1D) {
+				// 操作对象为指针i32*，各层大小为：4
+				if (layer == 0) {
+					return 4;
+				}
+				throw new RuntimeException("getelementptr有误");
+			} else if (value.getSymbol() instanceof Array2D) {
+				// 操作对象为指针[shapeY x i32]*，各层大小为：4 * shapeY, 4
+				Array2D array = (Array2D) value.getSymbol();
+				if (layer == 0) {
+					return 4 * array.getShapeY();
+				} else if (layer == 1) {
+					return 4;
+				}
+				throw new RuntimeException("getelementptr有误");
+			}
+			throw new RuntimeException("getelementptr有误");
+		} else if (operand.getSymbol() instanceof Array1D) {
 			Array1D array = (Array1D) operand.getSymbol();
 			// 操作对象为数组，各层大小分别为：4 * shape、4
 			if (layer == 0) {
@@ -77,26 +103,6 @@ public class Getelementptr extends Instruction {
 				return 4 * array.getShapeY();
 			} else if (layer == 2) {
 				return 4;
-			}
-			throw new RuntimeException("getelementptr有误");
-		} else if (operand instanceof Load) {
-			// 操作对象为指针
-			Value value = ((Load) operand).getOperands().get(0);
-			if (value.getSymbol() instanceof Array1D) {
-				// 操作对象为指针i32*，各层大小为：4
-				if (layer == 0) {
-					return 4;
-				}
-				throw new RuntimeException("getelementptr有误");
-			} else if (value.getSymbol() instanceof Array2D) {
-				// 操作对象为指针[shapeY x i32]*，各层大小为：4 * shapeY, 4
-				Array2D array = (Array2D) value.getSymbol();
-				if (layer == 0) {
-					return 4 * array.getShapeY();
-				} else if (layer == 1) {
-					return 4;
-				}
-				throw new RuntimeException("getelementptr有误");
 			}
 			throw new RuntimeException("getelementptr有误");
 		} else if (operand instanceof Getelementptr) {
