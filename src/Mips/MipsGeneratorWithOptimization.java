@@ -24,7 +24,7 @@ public class MipsGeneratorWithOptimization {
 	}
 
 	public void generate() throws IOException {
-		// 进行优化，消除phi指令，图着色分配寄存器
+		// 进行优化，消除phi指令
 		new MipsOptimizer().optimize(module);
 		generateMipsFromModule();
 	}
@@ -208,12 +208,9 @@ public class MipsGeneratorWithOptimization {
 			} else if (instruction instanceof Putstr) {
 				generateMipsFromPutstr((Putstr) instruction);
 			} else if (instruction instanceof Ret) {
-				// 函数返回时，释放$a0-$a3，不需要再存回栈空间
-				// freeAllReg();
 				generateMipsFromRet((Ret) instruction);
 			} else if (instruction instanceof Br) {
 				// 退出基本块时，释放$a0-$a3
-				// freeAllReg();
 				generateMipsFromBr((Br) instruction);
 			} else if (instruction instanceof Move) {
 				generateMipsFromMove((Move) instruction);
@@ -502,8 +499,8 @@ public class MipsGeneratorWithOptimization {
 		// 释放栈空间
 		freeStack(currentFunction.getPrimarySp() - sp);
 
-		// 释放寄存器$a0-$a3
-		freeAllReg();
+		// 函数返回时，需释放$a0-$a3，但不需存回栈空间
+		freeAllRegWithoutStore();
 
 		// 返回
 		writer.write("jr $ra");
@@ -514,6 +511,7 @@ public class MipsGeneratorWithOptimization {
 		ArrayList<Value> operands = b.getOperands();
 		if (operands.size() == 1) {
 			BasicBlock block = (BasicBlock) operands.get(0);
+			// 离开基本块前，释放寄存器
 			freeAllReg();
 			writer.write("j " + block.getMipsLabel(currentFunction.getRawName()));
 			writer.newLine();
@@ -523,6 +521,7 @@ public class MipsGeneratorWithOptimization {
 			BasicBlock falseBlock = (BasicBlock) operands.get(2);
 
 			int reg = getRegister(cond);
+			// 离开基本块前，释放寄存器
 			freeAllReg();
 			writer.write(String.format("beqz $a%d, %s", reg, falseBlock.getMipsLabel(currentFunction.getRawName())));
 			writer.newLine();
@@ -541,12 +540,18 @@ public class MipsGeneratorWithOptimization {
 	}
 
 	private void allocStack(int size) throws IOException {
+		if (size == 0) {
+			return;
+		}
 		// 分配栈空间
 		writer.write("addiu $sp, $sp, " + (-size));
 		writer.newLine();
 	}
 
 	private void freeStack(int size) throws IOException {
+		if (size == 0) {
+			return;
+		}
 		// 释放栈空间
 		writer.write("addiu $sp, $sp, " + size);
 		writer.newLine();
@@ -573,10 +578,9 @@ public class MipsGeneratorWithOptimization {
 		}
 
 		// 无空闲寄存器，需要释放
-		Integer reg = null;
 		// 释放未访问时间最长的
 		Value v = registerUseMap.keySet().iterator().next();
-		reg = registerUseMap.get(v);
+		int reg = registerUseMap.get(v);
 		freeRegister(v);
 
 		// 记录分配情况
@@ -611,17 +615,6 @@ public class MipsGeneratorWithOptimization {
 		return reg;
 	}
 
-	// 用于获取操作数（中间变量）所在的寄存器
-	private int getRegisterAfterSaveReg(Value value) throws IOException {
-		if (value instanceof ConstInt) {
-			writer.write(String.format("li $a0, %d", ((ConstInt) value).getValue()));
-			writer.newLine();
-			return 0;
-		}
-		loadFromStack("$a0", Integer.parseInt(value.getAddr()) - sp);
-		return 0;
-	}
-
 	private void freeRegister(Value value) throws IOException {
 		int reg = registerUseMap.get(value);
 		if (value instanceof Instruction) {
@@ -632,6 +625,7 @@ public class MipsGeneratorWithOptimization {
 		registerUseMap.remove(value);
 	}
 
+	// 释放$a0-$a3，将值存回栈空间
 	private void freeAllReg() throws IOException {
 		for (Value value : registerUseMap.keySet()) {
 			int reg = registerUseMap.get(value);
@@ -641,6 +635,12 @@ public class MipsGeneratorWithOptimization {
 			}
 			registerUsed[reg] = null;
 		}
+		registerUseMap.clear();
+	}
+
+	// 释放$a0-$a3，值不存回栈空间
+	private void freeAllRegWithoutStore() {
+		registerUsed = new Value[4];
 		registerUseMap.clear();
 	}
 }
