@@ -61,17 +61,21 @@ public class ReplacePhi extends BaseOptimizer {
 				Empty empty = new Empty();
 				instruction.replaceUsed(empty);
 				basicBlock.getValues().set(j, empty);
+				instruction.delete();
 			}
 		}
 
 		// PC串行化
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (int i = 0; i < basicBlock.getValues().size(); i++) {
+			for (int i = 0; i < basicBlock.getValues().size();) {
 				Instruction instruction = basicBlock.getValues().get(i);
 				if (instruction instanceof PC) {
 					PC pc = (PC) instruction;
-					basicBlock.replacePC(pc, pc.sequential());
+					basicBlock.replaceInstruction(pc, pc.sequential());
+					pc.delete();
+					continue;
 				}
+				i++;
 			}
 		}
 	}

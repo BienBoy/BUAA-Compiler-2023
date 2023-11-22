@@ -8,12 +8,14 @@ import SymbolTable.Variable;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class Function extends Value {
 	private final ArrayList<BasicBlock> basicBlocks;
 	private final ArrayList<FunctionParam> params;
 	private int primarySp; // 初始栈指针位置
 	private int raAddr; // $ra在栈上的地址
+	private Map<String, Integer> registerAddr; // 保存的现场的地址
 
 	public Function(String name, Symbol symbol) {
 		super(name, symbol);
@@ -91,5 +93,13 @@ public class Function extends Value {
 
 	public void setRaAddr(int raAddr) {
 		this.raAddr = raAddr;
+	}
+
+	public Map<String, Integer> getRegisterAddr() {
+		return registerAddr;
+	}
+
+	public void setRegisterAddr(Map<String, Integer> registerAddr) {
+		this.registerAddr = registerAddr;
 	}
 }

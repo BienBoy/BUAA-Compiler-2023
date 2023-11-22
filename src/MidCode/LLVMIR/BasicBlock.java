@@ -2,7 +2,6 @@ package MidCode.LLVMIR;
 
 import MidCode.LLVMIR.Instruction.Br;
 import MidCode.LLVMIR.Instruction.Instruction;
-import MidCode.LLVMIR.Instruction.PC;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -17,10 +16,12 @@ public class BasicBlock extends Value {
 	}
 
 	public void add(Instruction value) {
+		value.setBasicBlock(this);
 		values.add(value);
 	}
 
 	public void add(int index, Instruction value) {
+		value.setBasicBlock(this);
 		values.add(index, value);
 	}
 
@@ -58,7 +59,7 @@ public class BasicBlock extends Value {
 	}
 
 	// 将PC替换为其他指令to(s)
-	public void replacePC(PC from, Instruction...to) {
+	public void replaceInstruction(Instruction from, Instruction...to) {
 		Integer position = null;
 		for (int i = 0; i < values.size(); i++) {
 			if (values.get(i) == from) {
