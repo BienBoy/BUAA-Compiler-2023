@@ -20,8 +20,8 @@ public class Array1D extends ConstSymbol {
 	}
 
 	public Integer getValue(int i) {
-		if ((value == null || value[i] == null) && isGlobal())
-			return 0;
+		if (value == null || value[i] == null)
+			return isGlobal() ? 0 : null;
 		return value[i];
 	}
 
