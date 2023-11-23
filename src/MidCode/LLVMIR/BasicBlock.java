@@ -8,25 +8,25 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class BasicBlock extends Value {
-	private final ArrayList<Instruction> values; // 基本块内的指令
+	private final ArrayList<Instruction> instructions; // 基本块内的指令
 
 	public BasicBlock(String name) {
 		super(name);
-		values = new ArrayList<>();
+		instructions = new ArrayList<>();
 	}
 
 	public void add(Instruction value) {
 		value.setBasicBlock(this);
-		values.add(value);
+		instructions.add(value);
 	}
 
 	public void add(int index, Instruction value) {
 		value.setBasicBlock(this);
-		values.add(index, value);
+		instructions.add(index, value);
 	}
 
-	public ArrayList<Instruction> getValues() {
-		return values;
+	public ArrayList<Instruction> getInstructions() {
+		return instructions;
 	}
 
 	@Override
@@ -35,7 +35,7 @@ public class BasicBlock extends Value {
 			writer.write(name + ":");
 			writer.newLine();
 		}
-		for (Value value : values) {
+		for (Value value : instructions) {
 			value.output(writer);
 		}
 	}
@@ -51,7 +51,7 @@ public class BasicBlock extends Value {
 
 	// 替换下个基本块
 	public void replaceNext(BasicBlock from, BasicBlock to) {
-		Instruction instruction = values.get(values.size() - 1);
+		Instruction instruction = instructions.get(instructions.size() - 1);
 		if (!(instruction instanceof Br)) {
 			throw new RuntimeException("BasicBlock最后一条语句不是跳转语句");
 		}
@@ -61,8 +61,8 @@ public class BasicBlock extends Value {
 	// 将PC替换为其他指令to(s)
 	public void replaceInstruction(Instruction from, Instruction...to) {
 		Integer position = null;
-		for (int i = 0; i < values.size(); i++) {
-			if (values.get(i) == from) {
+		for (int i = 0; i < instructions.size(); i++) {
+			if (instructions.get(i) == from) {
 				position = i;
 				break;
 			}
@@ -70,9 +70,9 @@ public class BasicBlock extends Value {
 		if (position == null) {
 			return;
 		}
-		values.remove(position.intValue());
+		instructions.remove(position.intValue());
 		for (int i = 0; i < to.length; i++) {
-			values.add(position + i, to[i]);
+			instructions.add(position + i, to[i]);
 		}
 	}
 }

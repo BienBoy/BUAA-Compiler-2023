@@ -7,7 +7,7 @@ import MidCode.LLVMIR.Value;
 /**
  * 指令类基类
  */
-public class Instruction extends User {
+public abstract class Instruction extends User {
 	private BasicBlock basicBlock;
 	public Instruction(Value...operands) {
 		super(operands);
@@ -32,6 +32,14 @@ public class Instruction extends User {
 
 	public void delete() {
 		removeUse();
-		basicBlock.getValues().remove(this);
+		basicBlock.getInstructions().remove(this);
+	}
+
+	public boolean hasResult() {
+		return false;
+	}
+
+	public boolean isCommutative() {
+		return false;
 	}
 }

@@ -14,4 +14,9 @@ public class Ne extends Icmp {
 	public String getOp() {
 		return "ne";
 	}
+
+	@Override
+	public boolean isCommutative() {
+		return true;
+	}
 }

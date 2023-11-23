@@ -24,8 +24,8 @@ public class Rewrite extends BaseOptimizer {
 
 	public void rewrite(Function function) {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (int i = 0; i < basicBlock.getValues().size(); i++) {
-				Instruction instruction = basicBlock.getValues().get(i);
+			for (int i = 0; i < basicBlock.getInstructions().size(); i++) {
+				Instruction instruction = basicBlock.getInstructions().get(i);
 				for (int j = 0; j < instruction.getOperands().size(); j++) {
 					Value operand = instruction.getOperands().get(j);
 					if (operand instanceof FunctionParam) {

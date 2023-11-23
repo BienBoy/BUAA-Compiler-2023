@@ -17,4 +17,9 @@ public class Sdiv extends Instruction {
 		writer.write("\t" + name + " = sdiv i32 " + left + ", " + right);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

@@ -20,4 +20,9 @@ public class Zext extends Instruction {
 		writer.write("\t" + name + " = zext " + sorceType + " " + operand + " to " + targetType);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

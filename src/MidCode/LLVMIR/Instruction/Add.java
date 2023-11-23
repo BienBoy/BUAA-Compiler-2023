@@ -17,4 +17,14 @@ public class Add extends Instruction {
 		writer.write("\t" + name + " = add i32 " + left + ", " + right);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
+
+	@Override
+	public boolean isCommutative() {
+		return true;
+	}
 }

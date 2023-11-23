@@ -125,7 +125,7 @@ public class MipsGenerator {
 		// 为所有的中间变量分配空间
 		int primary = sp;
 		for (BasicBlock b : currentFunction.getBasicBlocks()) {
-			for (Value v : b.getValues()) {
+			for (Value v : b.getInstructions()) {
 				if (v instanceof Alloca) {
 					sp -= ((Alloca) v).getSize();
 					v.setAddr("" + sp);
@@ -161,7 +161,7 @@ public class MipsGenerator {
 			writer.newLine();
 		}
 
-		ArrayList<Instruction> instructions = block.getValues();
+		ArrayList<Instruction> instructions = block.getInstructions();
 		for (Instruction instruction : instructions) {
 			if (instruction instanceof Alloca) {
 				continue;

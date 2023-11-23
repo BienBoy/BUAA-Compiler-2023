@@ -110,7 +110,7 @@ public class RegisterAlloc extends BaseOptimizer {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
 			Set<Value> def = new HashSet<>();
 			Set<Value> use = new HashSet<>();
-			for (Instruction instruction : basicBlock.getValues()) {
+			for (Instruction instruction : basicBlock.getInstructions()) {
 				/*实践表明，Empty、Move与其他指令进行一样的处理可行，
 				  即Empty加入def，而Move的两个操作对象加入use*/
 				if (instruction instanceof Alloca) {
@@ -134,9 +134,7 @@ public class RegisterAlloc extends BaseOptimizer {
 						use.add(operand);
 					}
 				}
-				if (!use.contains(instruction) &&
-						instruction.getName() != null &&
-						!instruction.getName().isEmpty()) {
+				if (!use.contains(instruction) && instruction.hasResult()) {
 					def.add(instruction);
 				}
 			}
@@ -176,7 +174,7 @@ public class RegisterAlloc extends BaseOptimizer {
 	private void buildConflictGraph(Function function) {
 		defs.values().forEach(e->e.forEach(conflictGraph::add));
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			ArrayList<Instruction> instructions = basicBlock.getValues();
+			ArrayList<Instruction> instructions = basicBlock.getInstructions();
 			Set<Value> out = new HashSet<>(outs.get(basicBlock));
 			for (int i = instructions.size() - 1; i >= 0; i--) {
 				Instruction instruction = instructions.get(i);
@@ -185,7 +183,7 @@ public class RegisterAlloc extends BaseOptimizer {
 				}
 
 				// 变量定义处所有出口活跃的变量和定义的变量是互相冲突的
-				if (instruction.getName() != null && !instruction.getName().isEmpty()) {
+				if (instruction.hasResult()) {
 					// 当前为变量定义语句
 					out.forEach(e -> conflictGraph.add(instruction, e));
 				}
@@ -193,10 +191,7 @@ public class RegisterAlloc extends BaseOptimizer {
 				// 更新out
 				out.remove(instruction);
 				instruction.getOperands().forEach(e -> {
-					if (e instanceof Alloca || e instanceof BasicBlock ||
-							e instanceof GlobalVariable || e instanceof ConstInt ||
-							e instanceof Undef || e instanceof ConstString ||
-							e instanceof FunctionParam) {
+					if (!(e instanceof Instruction) || e instanceof Alloca) {
 						return;
 					}
 					out.add(e);
@@ -208,7 +203,7 @@ public class RegisterAlloc extends BaseOptimizer {
 
 	private void buildMoveRelated(Function function) {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (Instruction instruction : basicBlock.getValues()) {
+			for (Instruction instruction : basicBlock.getInstructions()) {
 				if (instruction instanceof Move) {
 					Value target = instruction.getOperands().get(0);
 					Value source = instruction.getOperands().get(1);
@@ -354,8 +349,8 @@ public class RegisterAlloc extends BaseOptimizer {
 		alloca.setSymbol(new Variable("temp"));
 		function.getBasicBlocks().get(0).add(0, alloca);
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (int i = 0; i < basicBlock.getValues().size(); i++) {
-				Instruction instruction = basicBlock.getValues().get(i);
+			for (int i = 0; i < basicBlock.getInstructions().size(); i++) {
+				Instruction instruction = basicBlock.getInstructions().get(i);
 				if (instruction == value) {
 					// 为定义语句，后面添加一条store
 					basicBlock.add(i + 1, new Store(instruction, alloca));

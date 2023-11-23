@@ -122,7 +122,7 @@ public class IrBuilder {
 		if (!block.lastReturn()) {
 			currentBasicBlock.add(generateRet());
 		}
-		if (currentBasicBlock.getValues().isEmpty()) {
+		if (currentBasicBlock.getInstructions().isEmpty()) {
 			currentFunction.getBasicBlocks().remove(currentFunction.getBasicBlocks().size()-1);
 		}
 	}
@@ -272,9 +272,9 @@ public class IrBuilder {
 
 		Stmt stmt = stmtFor.getStmt();
 		generateInstructionsFromStmt(stmt);
-		if (currentBasicBlock.getValues().isEmpty() ||
-				!(currentBasicBlock.getValues().get(currentBasicBlock.getValues().size() - 1) instanceof Ret) ||
-				!(currentBasicBlock.getValues().get(currentBasicBlock.getValues().size() - 1) instanceof Br)
+		if (currentBasicBlock.getInstructions().isEmpty() ||
+				!(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Ret) ||
+				!(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Br)
 		) {
 			currentBasicBlock.add(generateBr(loopBasicBlocks[0]));
 		}
@@ -328,9 +328,9 @@ public class IrBuilder {
 			BasicBlock temp = basicBlocks[1];
 			Stmt ifStmt = (Stmt) stmtIf.getChildren().get(4);
 			generateInstructionsFromStmt(ifStmt);
-			if (currentBasicBlock.getValues().isEmpty() ||
-					!(currentBasicBlock.getValues().get(currentBasicBlock.getValues().size() - 1) instanceof Ret) &&
-					!(currentBasicBlock.getValues().get(currentBasicBlock.getValues().size() - 1) instanceof Br)) {
+			if (currentBasicBlock.getInstructions().isEmpty() ||
+					!(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Ret) &&
+					!(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Br)) {
 				currentBasicBlock.add(generateBr(temp));
 			}
 
@@ -349,7 +349,7 @@ public class IrBuilder {
 
 			Stmt ifStmt = (Stmt) stmtIf.getChildren().get(4);
 			generateInstructionsFromStmt(ifStmt);
-			if (currentBasicBlock.getValues().isEmpty() || !(currentBasicBlock.getValues().get(currentBasicBlock.getValues().size() - 1) instanceof Ret)) {
+			if (currentBasicBlock.getInstructions().isEmpty() || !(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Ret)) {
 				currentBasicBlock.add(generateBr(temp2));
 			}
 
@@ -359,7 +359,7 @@ public class IrBuilder {
 			nameBasicBlock(currentBasicBlock);
 			Stmt elseStmt = (Stmt) stmtIf.getChildren().get(6);
 			generateInstructionsFromStmt(elseStmt);
-			if (currentBasicBlock.getValues().isEmpty() || !(currentBasicBlock.getValues().get(currentBasicBlock.getValues().size() - 1) instanceof Ret)) {
+			if (currentBasicBlock.getInstructions().isEmpty() || !(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Ret)) {
 				currentBasicBlock.add(generateBr(temp2));
 			}
 

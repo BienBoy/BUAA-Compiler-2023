@@ -17,4 +17,9 @@ public class Sub extends Instruction {
 		writer.write("\t" + name + " = sub i32 " + left + ", " + right);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

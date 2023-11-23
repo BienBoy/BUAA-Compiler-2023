@@ -39,4 +39,9 @@ public class Phi extends Instruction {
 	public Alloca getVar() {
 		return var;
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

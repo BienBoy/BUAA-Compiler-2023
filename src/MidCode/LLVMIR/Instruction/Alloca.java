@@ -78,4 +78,9 @@ public class Alloca extends Instruction {
 	public boolean isLocalVariable() {
 		return symbol instanceof Variable || getType().endsWith("**");
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

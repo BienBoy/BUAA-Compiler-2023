@@ -17,4 +17,14 @@ public class Mul extends Instruction {
 		writer.write("\t" + name + " = mul i32 " + left + ", " + right);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
+
+	@Override
+	public boolean isCommutative() {
+		return true;
+	}
 }

@@ -19,4 +19,9 @@ public class Empty extends Instruction {
 		writer.write("\t" + name + " = " + name);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

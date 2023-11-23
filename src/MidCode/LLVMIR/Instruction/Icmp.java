@@ -20,4 +20,9 @@ public abstract class Icmp extends Instruction {
 		writer.write("\t" + name + " = icmp " + getOp() + " i32 " + left + ", " + right);
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

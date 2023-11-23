@@ -2,10 +2,8 @@ package MidCode;
 
 import MidCode.LLVMIR.BasicBlock;
 import MidCode.LLVMIR.Function;
-import MidCode.LLVMIR.Instruction.Empty;
-import MidCode.LLVMIR.Instruction.Phi;
+import MidCode.LLVMIR.Instruction.Instruction;
 import MidCode.LLVMIR.IrModule;
-import MidCode.LLVMIR.Value;
 
 public class IrRenamer {
 	private int counter;
@@ -32,10 +30,9 @@ public class IrRenamer {
 		basicBlock.setName(String.valueOf(counter));
 		counter++;
 
-		for (Value value : basicBlock.getValues()) {
-			if (value.getName() != null && !value.getName().isEmpty() ||
-					value instanceof Phi || value instanceof Empty) {
-				value.setName("%" + counter);
+		for (Instruction instruction : basicBlock.getInstructions()) {
+			if (instruction.hasResult()) {
+				instruction.setName("%" + counter);
 				counter++;
 			}
 		}

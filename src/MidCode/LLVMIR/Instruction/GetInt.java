@@ -15,4 +15,8 @@ public class GetInt extends Instruction {
 		writer.write("\t" + name + " = call i32 @getint()");
 		writer.newLine();
 	}
+
+	public boolean hasResult() {
+		return true;
+	}
 }

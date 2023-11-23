@@ -35,7 +35,7 @@ public class CFG {
 		for (int i = 0 ;i < function.getBasicBlocks().size(); i++) {
 			BasicBlock basicBlock = function.getBasicBlocks().get(i);
 			HashSet<BasicBlock> next = new LinkedHashSet<>();
-			for (Instruction instruction : basicBlock.getValues()) {
+			for (Instruction instruction : basicBlock.getInstructions()) {
 				if (instruction instanceof Br) {
 					instruction.getOperands().forEach(value -> {
 						if (value instanceof BasicBlock) {

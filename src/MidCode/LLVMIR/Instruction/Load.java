@@ -33,4 +33,9 @@ public class Load extends Instruction {
 	public Value getVar() {
 		return operands.get(0);
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

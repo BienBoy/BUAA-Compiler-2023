@@ -26,7 +26,7 @@ public class ReplacePhi extends BaseOptimizer {
 		for (int i = 1; i < num; i++) {
 			BasicBlock basicBlock = function.getBasicBlocks().get(i);
 			// 没有phi指令可以跳过
-			if (!(basicBlock.getValues().get(0) instanceof Phi)) {
+			if (!(basicBlock.getInstructions().get(0) instanceof Phi)) {
 				continue;
 			}
 
@@ -43,12 +43,12 @@ public class ReplacePhi extends BaseOptimizer {
 					pre.replaceNext(basicBlock, newBlock);
 				} else {
 					// 在br语句前添加PC
-					pre.add(pre.getValues().size() - 1, pc);
+					pre.add(pre.getInstructions().size() - 1, pc);
 				}
 			}
 
-			for (int j = 0; j < basicBlock.getValues().size(); j++) {
-				Instruction instruction = basicBlock.getValues().get(j);
+			for (int j = 0; j < basicBlock.getInstructions().size(); j++) {
+				Instruction instruction = basicBlock.getInstructions().get(j);
 				if (!(instruction instanceof Phi)) {
 					break;
 				}
@@ -60,15 +60,15 @@ public class ReplacePhi extends BaseOptimizer {
 				// phi指令替换为empty
 				Empty empty = new Empty();
 				instruction.replaceUsed(empty);
-				basicBlock.getValues().set(j, empty);
+				basicBlock.getInstructions().set(j, empty);
 				instruction.delete();
 			}
 		}
 
 		// PC串行化
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (int i = 0; i < basicBlock.getValues().size();) {
-				Instruction instruction = basicBlock.getValues().get(i);
+			for (int i = 0; i < basicBlock.getInstructions().size();) {
+				Instruction instruction = basicBlock.getInstructions().get(i);
 				if (instruction instanceof PC) {
 					PC pc = (PC) instruction;
 					basicBlock.replaceInstruction(pc, pc.sequential());

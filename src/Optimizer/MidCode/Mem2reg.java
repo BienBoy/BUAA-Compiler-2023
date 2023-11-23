@@ -23,7 +23,7 @@ public class Mem2reg extends BaseOptimizer {
 		// 获取所有变量
 		BasicBlock firstBlock = function.getBasicBlocks().get(0);
 		ArrayList<Alloca> vars = new ArrayList<>();
-		for (Instruction i : firstBlock.getValues()) {
+		for (Instruction i : firstBlock.getInstructions()) {
 			if (i instanceof Alloca && ((Alloca) i).isLocalVariable()) {
 				vars.add((Alloca) i);
 				continue;
@@ -34,7 +34,7 @@ public class Mem2reg extends BaseOptimizer {
 			// 获取含有var定义的基本块
 			ArrayList<BasicBlock> defs = new ArrayList<>();
 			for (BasicBlock b : function.getBasicBlocks()) {
-				for (Instruction i : b.getValues()) {
+				for (Instruction i : b.getInstructions()) {
 					if (i instanceof Store && i.getOperands().contains(var)) {
 						defs.add(b);
 						break;
@@ -71,7 +71,7 @@ public class Mem2reg extends BaseOptimizer {
 
 	private void fillPhiParams(Function function, CFG graph) {
 		for (BasicBlock b : function.getBasicBlocks()) {
-			for (Instruction i : b.getValues()) {
+			for (Instruction i : b.getInstructions()) {
 				if (i instanceof Phi) {
 					ArrayList<Value> choices = new ArrayList<>();
 					Set<BasicBlock> pres = graph.getPreNodes().get(b);
@@ -87,7 +87,7 @@ public class Mem2reg extends BaseOptimizer {
 
 	private void renameVar(Function function, CFG graph) {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			ArrayList<Instruction> instructions = basicBlock.getValues();
+			ArrayList<Instruction> instructions = basicBlock.getInstructions();
 			Iterator<Instruction> iterator = instructions.iterator();
 			while (iterator.hasNext()) {
 				Instruction instruction = iterator.next();
@@ -105,7 +105,7 @@ public class Mem2reg extends BaseOptimizer {
 		}
 
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			ArrayList<Instruction> instructions = basicBlock.getValues();
+			ArrayList<Instruction> instructions = basicBlock.getInstructions();
 			Iterator<Instruction> iterator = instructions.iterator();
 			while (iterator.hasNext()) {
 				Instruction instruction = iterator.next();
@@ -123,7 +123,7 @@ public class Mem2reg extends BaseOptimizer {
 	}
 
 	private Value findDef(Value from, Alloca var, BasicBlock basicBlock, CFG graph) {
-		ArrayList<Instruction> instructions = basicBlock.getValues();
+		ArrayList<Instruction> instructions = basicBlock.getInstructions();
 		boolean flag = from != null;
 		for (int i = instructions.size() - 1; i >= 0; i--) {
 			if (flag) {

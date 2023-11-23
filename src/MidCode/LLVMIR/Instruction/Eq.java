@@ -14,4 +14,9 @@ public class Eq extends Icmp {
 	public String getOp() {
 		return "eq";
 	}
+
+	@Override
+	public boolean isCommutative() {
+		return true;
+	}
 }

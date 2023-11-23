@@ -49,7 +49,7 @@ public class DeadCode extends BaseOptimizer {
 			if (!b.equals(function.getBasicBlocks().get(0)) &&
 					b.getUseList().isEmpty()) {
 				change = true;
-				b.getValues().forEach(User::removeUse);
+				b.getInstructions().forEach(User::removeUse);
 				return true;
 			}
 			return false;
@@ -63,7 +63,7 @@ public class DeadCode extends BaseOptimizer {
 
 	private void removeDeadInstructions(BasicBlock basicBlock) {
 		// 遍历删除计算结果未被使用的指令
-		basicBlock.getValues().removeIf(v->{
+		basicBlock.getInstructions().removeIf(v->{
 			if (v.getUseList().isEmpty() && (v instanceof Add ||
 					v instanceof Sub || v instanceof Mul || v instanceof Sdiv ||
 					v instanceof Srem || v instanceof Icmp || v instanceof Zext ||

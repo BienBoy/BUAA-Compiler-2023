@@ -111,4 +111,9 @@ public class Getelementptr extends Instruction {
 		}
 		throw new RuntimeException("getelementptr有误");
 	}
+
+	@Override
+	public boolean hasResult() {
+		return true;
+	}
 }

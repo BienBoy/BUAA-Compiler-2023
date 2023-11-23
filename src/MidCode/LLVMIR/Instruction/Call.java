@@ -52,4 +52,11 @@ public class Call extends Instruction {
 		writer.write(")");
 		writer.newLine();
 	}
+
+	@Override
+	public boolean hasResult() {
+		Function function = (Function) operands.get(0);
+		SymbolTable.Function symbol = (SymbolTable.Function) function.getSymbol();
+		return symbol.hasReturn();
+	}
 }
