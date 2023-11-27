@@ -71,6 +71,7 @@ public class BasicBlock extends Value {
 			return;
 		}
 		instructions.remove(position.intValue());
+		from.removeUse();
 		for (int i = 0; i < to.length; i++) {
 			instructions.add(position + i, to[i]);
 		}

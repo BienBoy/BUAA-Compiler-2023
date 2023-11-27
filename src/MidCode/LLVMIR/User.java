@@ -22,7 +22,7 @@ public class User extends Value {
 
 	public void addOperand(Value...values) {
 		for (Value value : values) {
-			value.addUse(new Use(value, this, operands.size()));
+			value.addUse(new Use(value, this));
 			operands.add(value);
 		}
 	}
@@ -49,7 +49,9 @@ public class User extends Value {
 		for (int i = 0; i < operands.size(); i++) {
 			if (operands.get(i).equals(from)) {
 				operands.set(i, to);
-				to.addUse(new Use(to, this, i));
+				// 维护useList
+				to.addUse(new Use(to, this));
+				to.useList.removeIf(use -> use.getUser().equals(from));
 			}
 		}
 	}

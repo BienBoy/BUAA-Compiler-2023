@@ -6,12 +6,10 @@ package MidCode.LLVMIR;
 public class Use {
 	private Value value; // 被使用的Value
 	private User user; // 使用者
-	private int pos; // 位置
 
-	public Use(Value value, User user, int pos) {
+	public Use(Value value, User user) {
 		this.value = value;
 		this.user = user;
-		this.pos = pos;
 	}
 
 	public Value getValue() {

@@ -5,6 +5,9 @@ import MidCode.LLVMIR.*;
 import MidCode.LLVMIR.Instruction.*;
 import Optimizer.BaseOptimizer;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DeadCode extends BaseOptimizer {
 	private boolean change = true;
 	@Override
@@ -63,16 +66,20 @@ public class DeadCode extends BaseOptimizer {
 
 	private void removeDeadInstructions(BasicBlock basicBlock) {
 		// 遍历删除计算结果未被使用的指令
-		basicBlock.getInstructions().removeIf(v->{
-			if (v.getUseList().isEmpty() && (v instanceof Add ||
-					v instanceof Sub || v instanceof Mul || v instanceof Sdiv ||
-					v instanceof Srem || v instanceof Icmp || v instanceof Zext ||
-					v instanceof Load || v instanceof Alloca || v instanceof Phi)) {
+		List<Instruction> toDelete = new ArrayList<>();
+		for (Instruction instruction : basicBlock.getInstructions()) {
+			if (canDeleteInstruction(instruction)) {
 				change = true;
-				v.removeUse();
-				return true;
+				toDelete.add(instruction);
 			}
-			return false;
-		});
+		}
+		toDelete.forEach(Instruction::delete);
+	}
+
+	private boolean canDeleteInstruction(Instruction i) {
+		return i.getUseList().isEmpty() && (i instanceof Add ||
+				i instanceof Sub || i instanceof Mul || i instanceof Sdiv ||
+				i instanceof Srem || i instanceof Icmp || i instanceof Zext ||
+				i instanceof Load || i instanceof Alloca || i instanceof Phi);
 	}
 }
