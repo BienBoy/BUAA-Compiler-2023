@@ -99,6 +99,7 @@ public class Mem2reg extends BaseOptimizer {
 					// 对于非数组的Load，取消内存读取
 					instruction.replaceUsed(findDef(instruction,
 							(Alloca) ((Load) instruction).getVar(), basicBlock, graph));
+					instruction.removeUse();
 					iterator.remove();
 				}
 			}
@@ -112,6 +113,7 @@ public class Mem2reg extends BaseOptimizer {
 				if (instruction instanceof Store && ((Store) instruction).isLocalVariable()) {
 					// 对于非数组的Store，将对其的使用替换为要更新的值
 					instruction.replaceUsed(((Store) instruction).getNewValue());
+					instruction.removeUse();
 					iterator.remove();
 				}
 			}
