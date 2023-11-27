@@ -13,6 +13,7 @@ public class MidCodeOptimizer extends BaseOptimizer {
 //		new GVN().optimize(module);
 //		new GCM().optimize(module);
 		new LVN().optimize(module);
+		new SimpleGVN().optimize(module);
 		new ConstantFold().optimize(module);
 	}
 }
