@@ -11,11 +11,7 @@ import java.util.*;
 public class MipsGeneratorAfterRegisterAlloc {
 	private final IrModule module;
 	private final BufferedWriter writer;
-	private final Set<String> registerAvailable = new HashSet<String>(){{
-		add("$t0");add("$t1");add("$t2");add("$t3");add("$t4");add("$t5");
-		add("$t6");add("$t7");add("$t8");add("$t9");add("$s0");add("$s1");
-		add("$s2");add("$s3");add("$s4");add("$s5");add("$s6");add("$s7");
-	}}; // 可用寄存器
+	private Set<String> registerAvailable; // 可用寄存器
 	Map<Value, String> registers;
 	// 栈指针虚拟位置，初始时为0，仅用于计算偏移
 	private int sp = 0;
@@ -31,6 +27,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 		MipsOptimizer optimizer = new MipsOptimizer();
 		optimizer.optimize(module);
 		registers = optimizer.getRegisters();
+		registerAvailable = new HashSet<>(registers.values());
 		generateMipsFromModule();
 	}
 
@@ -427,12 +424,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 	}
 
 	private void generateMipsFromPutint(Putint putint) throws IOException {
-		// $a0存入栈中
-		int primary = sp;
-		sp -= 4;
-		int a0Addr = sp;
-		allocStack(primary - sp);
-		saveToStack("$a0", a0Addr - sp);
+		// 仅用到$a0、$V0，无需保存
 
 		// 传递参数
 		Value operand = putint.getOperands().get(0);
@@ -443,20 +435,10 @@ public class MipsGeneratorAfterRegisterAlloc {
 		// 调用宏
 		writer.write("putint");
 		writer.newLine();
-
-		// 恢复$a0
-		loadFromStack("$a0", a0Addr - sp);
-		freeStack(primary - sp);
-		sp = primary;
 	}
 
 	private void generateMipsFromPutstr(Putstr putstr) throws IOException {
-		// $a0、$v0存入栈中
-		int primary = sp;
-		sp -= 4;
-		int a0Addr = sp;
-		allocStack(primary - sp);
-		saveToStack("$a0", a0Addr - sp);
+		// 仅用到$a0、$V0，无需保存
 
 		// 传递参数
 		Value operand = putstr.getOperands().get(0);
@@ -466,11 +448,6 @@ public class MipsGeneratorAfterRegisterAlloc {
 		// 调用宏
 		writer.write("putstr");
 		writer.newLine();
-
-		// 恢复$a0、$v0
-		loadFromStack("$a0", a0Addr - sp);
-		freeStack(primary - sp);
-		sp = primary;
 	}
 
 	private void generateMipsFromRet(Ret r) throws IOException {
@@ -522,6 +499,12 @@ public class MipsGeneratorAfterRegisterAlloc {
 	private void generateMipsFromMove(Move move) throws IOException {
 		Value left = move.getOperands().get(0);
 		Value right = move.getOperands().get(1);
+		if (right instanceof ConstInt) {
+			String reg0 = getRegister(left);
+			writer.write(String.format("li %s, %d", reg0, ((ConstInt) right).getValue()));
+			writer.newLine();
+			return;
+		}
 		String reg0 = getRegister(left);
 		String reg1 = getRegister(right);
 		if (reg0.equals(reg1)) {
