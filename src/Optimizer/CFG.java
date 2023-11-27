@@ -152,4 +152,8 @@ public class CFG {
 			}
 		}
 	}
+
+	public BasicBlock getFirst() {
+		return function.getBasicBlocks().get(0);
+	}
 }
