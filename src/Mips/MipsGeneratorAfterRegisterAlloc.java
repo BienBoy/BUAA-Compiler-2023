@@ -266,7 +266,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 		}
 	}
 	private void generateMipsFromGetelementptr(Getelementptr g) throws IOException {
-		// 由于该指令需要分步计算，采用$v0,$v1暂时记录中间结果
+		// 由于该指令需要分步计算，采用$a2,$a3暂时记录中间结果
 		ArrayList<Value> operands = g.getOperands();
 		Value address = operands.get(0);
 		String reg0 = getRegister(g);
@@ -277,7 +277,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 		} else if (address instanceof Alloca) {
 			// 局部数组，起始地址为$sp+offset
 			int addr = Integer.parseInt(address.getAddr());
-			writer.write(String.format("add $a2, $sp, %d", addr - sp));
+			writer.write(String.format("addiu $a2, $sp, %d", addr - sp));
 			writer.newLine();
 		} else {
 			// getelementptr或指针值
@@ -288,29 +288,28 @@ public class MipsGeneratorAfterRegisterAlloc {
 
 		for (int i = 1; i < operands.size(); i++) {
 			int layerSize = g.getSize(i - 1);
+			String resultReg = i == operands.size() - 1 ? reg0 : "$a2";
 			if (operands.get(i) instanceof ConstInt) {
 				int offset = layerSize * ((ConstInt) operands.get(i)).getValue();
-				writer.write(String.format("add $a2, $a2, %d", offset));
+				writer.write(String.format("addiu %s, $a2, %d", resultReg, offset));
 				writer.newLine();
 			} else {
 				String reg1 = getRegister(operands.get(i));
-				// 中间临时结果使用 $fp 暂存
+				// 中间临时结果使用 $a3 暂存
 				writer.write(String.format("mul $a3, %s, %d", reg1, layerSize));
 				writer.newLine();
-				writer.write("add $a2, $a2, $a3");
+				writer.write(String.format("addu %s, $a2, $a3", resultReg));
 				writer.newLine();
 			}
 		}
-		writer.write(String.format("move %s, $a2", reg0));
-		writer.newLine();
 	}
 
 	private void generateMipsFromAdd(Add a) throws IOException {
-		calculate(a, "add");
+		calculate(a, "addu");
 	}
 
 	private void generateMipsFromSub(Sub s) throws IOException {
-		calculate(s, "sub");
+		calculate(s, "subu");
 	}
 
 	private void generateMipsFromMul(Mul m) throws IOException {
@@ -350,21 +349,37 @@ public class MipsGeneratorAfterRegisterAlloc {
 	}
 
 	private void calculate(Instruction instruction, String op) throws IOException {
-		// 命令右操作数可以为数字的命令
-		ArrayList<String> numberAvailable= new ArrayList<String>(){{
-			add("add"); add("sub"); add("mul"); add("rem");
-		}};
-
 		// 左操作数必须获取寄存器
 		Value left = instruction.getOperands().get(0);
 		String reg0 = getRegister(instruction);
 		String reg1 = getRegister(left);
 
 		Value right = instruction.getOperands().get(1);
-		if (right instanceof ConstInt && numberAvailable.contains(op)) {
+		if (right instanceof ConstInt && !op.equals("slt")) {
 			// 右操作数为常量，无需获取寄存器
 			int val = ((ConstInt) right).getValue();
-			writer.write(String.format(op + " %s, %s, %d", reg0, reg1, val));
+			if (op.equals("addu")) {
+				writer.write(String.format("addiu %s, %s, %d", reg0, reg1, val));
+				writer.newLine();
+			} else if (op.equals("subu")) {
+				writer.write(String.format("addiu %s, %s, %d", reg0, reg1, -val));
+				writer.newLine();
+			} else {
+				writer.write(String.format(op + " %s, %s, %d", reg0, reg1, val));
+				writer.newLine();
+			}
+		} else if (op.equals("div")) {
+			// 对于伪指令div $t1, $t2, $t3，Mars会生成检查除数不为零的语句，不需要
+			String reg2 = getRegister(right);
+			writer.write(String.format("div %s, %s", reg1, reg2));
+			writer.newLine();
+			writer.write(String.format("mflo %s", reg0));
+			writer.newLine();
+		} else if (op.equals("rem")) {
+			String reg2 = getRegister(right);
+			writer.write(String.format("div %s, %s", reg1, reg2));
+			writer.newLine();
+			writer.write(String.format("mfhi %s", reg0));
 			writer.newLine();
 		} else {
 			// 其他情况，需要获取寄存器

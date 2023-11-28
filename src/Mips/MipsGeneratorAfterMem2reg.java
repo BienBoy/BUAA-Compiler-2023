@@ -278,7 +278,7 @@ public class MipsGeneratorAfterMem2reg {
 			// 局部数组或指针，起始地址为$sp+offset
 			int addr = Integer.parseInt(address.getAddr());
 			int reg0 = allocRegister(g);
-			writer.write(String.format("add $a%d, $sp, %d", reg0, addr - sp));
+			writer.write(String.format("addiu $a%d, $sp, %d", reg0, addr - sp));
 			writer.newLine();
 		} else {
 			// getelementptr
@@ -293,7 +293,7 @@ public class MipsGeneratorAfterMem2reg {
 			if (operands.get(i) instanceof ConstInt) {
 				int offset = layerSize * ((ConstInt) operands.get(i)).getValue();
 				int reg0 = getRegister(g);
-				writer.write(String.format("add $a%d, $a%d, %d", reg0, reg0, offset));
+				writer.write(String.format("addiu $a%d, $a%d, %d", reg0, reg0, offset));
 				writer.newLine();
 			} else {
 				int reg1 = getRegister(operands.get(i));
@@ -302,18 +302,18 @@ public class MipsGeneratorAfterMem2reg {
 
 				writer.write(String.format("mul $a%d, $a%d, %d", reg2, reg1, layerSize));
 				writer.newLine();
-				writer.write(String.format("add $a%d, $a%d, $a%d", reg0, reg0, reg2));
+				writer.write(String.format("addiu $a%d, $a%d, $a%d", reg0, reg0, reg2));
 				writer.newLine();
 			}
 		}
 	}
 
 	private void generateMipsFromAdd(Add a) throws IOException {
-		calculate(a, "add");
+		calculate(a, "addu");
 	}
 
 	private void generateMipsFromSub(Sub s) throws IOException {
-		calculate(s, "sub");
+		calculate(s, "subu");
 	}
 
 	private void generateMipsFromMul(Mul m) throws IOException {
@@ -355,7 +355,7 @@ public class MipsGeneratorAfterMem2reg {
 	private void calculate(Instruction instruction, String op) throws IOException {
 		// 命令右操作数可以为数字的命令
 		ArrayList<String> numberAvailable= new ArrayList<String>(){{
-			add("add"); add("sub"); add("mul"); add("rem");
+			add("addu"); add("subu"); add("mul"); add("div"); add("rem");
 		}};
 
 		// 左操作数必须获取寄存器
