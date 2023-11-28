@@ -12,6 +12,7 @@ import SymbolTable.Variable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 public class IrBuilder {
 	private int index;
@@ -373,10 +374,17 @@ public class IrBuilder {
 		String str = ((LeafNode) stmtPrintf.getChildren().get(2)).getToken().getRawString();
 		str = str.substring(1, str.length() - 1).replace("\\n", "\n");
 		String[] substrs = str.split("(?=%d)|(?<=%d)");
+		List<Value> params = new ArrayList<>();
 		for (int i = 0, j = 0; i < substrs.length; i++) {
+			// 对于printf，需要先计算出参数的值
 			if (substrs[i].equals("%d")) {
 				Exp exp = (Exp) stmtPrintf.getChildren().get(4 + 2 * j++);
-				Value value = generateInstructionsFromExp(exp);
+				params.add(generateInstructionsFromExp(exp));
+			}
+		}
+		for (int i = 0, j = 0; i < substrs.length; i++) {
+			if (substrs[i].equals("%d")) {
+				Value value = params.get(j++);
 				currentBasicBlock.add(generatePutint(value));
 				continue;
 			}
