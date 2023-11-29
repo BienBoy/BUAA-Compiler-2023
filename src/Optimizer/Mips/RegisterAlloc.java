@@ -75,8 +75,8 @@ public class RegisterAlloc extends BaseOptimizer {
 						doSimplify = doCoalesce = false;
 						// 简化
 						simplify();
-						// 合并
-						coalesce();
+						// 合并，有bug，暂不进行
+						// coalesce();
 					}
 					// 冻结
 					if (!conflictGraph.isEmpty()) {
@@ -111,11 +111,27 @@ public class RegisterAlloc extends BaseOptimizer {
 			Set<Value> def = new HashSet<>();
 			Set<Value> use = new HashSet<>();
 			for (Instruction instruction : basicBlock.getInstructions()) {
-				/*实践表明，Empty、Move与其他指令进行一样的处理可行，
-				  即Empty加入def，而Move的两个操作对象加入use*/
-				if (instruction instanceof Alloca) {
+				// Empty、Move与其他指令不同，需要特殊处理
+				if (instruction instanceof Alloca || instruction instanceof Empty) {
 					continue;
 				}
+
+				if (instruction instanceof Move) {
+					Move move = (Move) instruction;
+					Value target = move.getOperands().get(0);
+					Value source = move.getOperands().get(1);
+					if (source instanceof ConstInt || source instanceof Undef) {
+						functionRegisters.put(source, allocConstIntRegister());
+					} else if (!def.contains(source)) {
+						// 操作数添加至use
+						use.add(source);
+					}
+					if (!use.contains(target)) {
+						def.add(target);
+					}
+					continue;
+				}
+
 				for (Value operand : instruction.getOperands()) {
 					if (operand instanceof Alloca || operand instanceof GlobalVariable ||
 							operand instanceof BasicBlock || operand instanceof ConstString ||
@@ -148,6 +164,7 @@ public class RegisterAlloc extends BaseOptimizer {
 	private void buildInsAndOuts(Function function) {
 		boolean change = true;
 		while (change) {
+			change = false;
 			ArrayList<BasicBlock> basicBlocks = function.getBasicBlocks();
 			for (int i = basicBlocks.size() - 1; i >= 0; i--) {
 				BasicBlock basicBlock = basicBlocks.get(i);
@@ -166,7 +183,7 @@ public class RegisterAlloc extends BaseOptimizer {
 				in.addAll(temp);
 				in.addAll(use); // in中元素不会减少，因此可以这样写
 
-				change = inSize != in.size() || outSize != out.size();
+				change = change || inSize != in.size() || outSize != out.size();
 			}
 		}
 	}
@@ -178,7 +195,19 @@ public class RegisterAlloc extends BaseOptimizer {
 			Set<Value> out = new HashSet<>(outs.get(basicBlock));
 			for (int i = instructions.size() - 1; i >= 0; i--) {
 				Instruction instruction = instructions.get(i);
-				if (instruction instanceof Alloca) {
+				if (instruction instanceof Alloca || instruction instanceof Empty) {
+					continue;
+				}
+
+				if (instruction instanceof Move) {
+					Move move = (Move) instruction;
+					Value target = move.getOperands().get(0);
+					Value source = move.getOperands().get(1);
+					out.forEach(e -> conflictGraph.add(target, e));
+					out.remove(target);
+					if (!(source instanceof ConstInt || source instanceof Undef)) {
+						out.add(source);
+					}
 					continue;
 				}
 
@@ -191,10 +220,9 @@ public class RegisterAlloc extends BaseOptimizer {
 				// 更新out
 				out.remove(instruction);
 				instruction.getOperands().forEach(e -> {
-					if (!(e instanceof Instruction) || e instanceof Alloca) {
-						return;
+					if (e instanceof Instruction && !(e instanceof Alloca)) {
+						out.add(e);
 					}
-					out.add(e);
 				});
 			}
 		}
@@ -207,9 +235,8 @@ public class RegisterAlloc extends BaseOptimizer {
 				if (instruction instanceof Move) {
 					Value target = instruction.getOperands().get(0);
 					Value source = instruction.getOperands().get(1);
-					if (source instanceof ConstInt || source instanceof Undef ||
-							target == source) {
-						// 常量或undef无法合并；相同无需合并
+					if (source instanceof ConstInt || source instanceof Undef) {
+						// 常量或undef无法合并
 						continue;
 					}
 					moveRelated.add(target, source);
@@ -232,15 +259,15 @@ public class RegisterAlloc extends BaseOptimizer {
 				}
 			}
 			if (toSimplify != null) {
+				change = doSimplify = true;
 				stack.add(toSimplify);
 				conflictGraph.remove(toSimplify);
-				doSimplify = true;
-				change = true;
 			}
 		}
 	}
 
 	private void coalesce() {
+		// TODO 有bug
 		// 保守合并无冲突的传送相关结点
 		boolean coalesced = true;
 		while (coalesced) {
@@ -248,8 +275,7 @@ public class RegisterAlloc extends BaseOptimizer {
 			Value first = null, second = null;
 			for (Value a : moveRelated.getAdjs().keySet()) {
 				for (Value b : moveRelated.getAdjs(a)) {
-					// 根据Briggs条件判断能否合并，即：
-					// a、b合并后的结点ab的度数大于等于registerNum的邻结点数量小于registerNum
+					// 根据Briggs条件判断能否合并
 					if (!conflictGraph.hasEdge(a,b) && briggs(a, b)) {
 						first = a;
 						second = b;
@@ -290,6 +316,20 @@ public class RegisterAlloc extends BaseOptimizer {
 			}
 		}
 		return count < registerNum;
+	}
+
+	private boolean george(Value a, Value b) {
+		// 根据George条件判断能否合并，即：
+		// a的所有高度数结点均和b冲突
+		for (Value value : conflictGraph.getAdjs(a)) {
+			if (conflictGraph.getAdjs(value).size() < registerNum) {
+				continue;
+			}
+			if (!conflictGraph.hasEdge(value, b)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private void freeze() {
@@ -351,28 +391,43 @@ public class RegisterAlloc extends BaseOptimizer {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
 			for (int i = 0; i < basicBlock.getInstructions().size(); i++) {
 				Instruction instruction = basicBlock.getInstructions().get(i);
+				if (instruction instanceof Alloca || instruction instanceof Empty) {
+					continue;
+				}
+
+				if (instruction instanceof Move) {
+					Move move = (Move) instruction;
+					if (move.getOperands().get(1) == value) {
+						// 使用前先load
+						Load load = new Load("%-1", alloca);
+						basicBlock.add(i, load);
+						move.replaceUse(value, load);
+						i++;
+					}
+					if (move.getOperands().get(0) == value) {
+						// 替换为store
+						basicBlock.replaceInstruction(move, new Store(move.getOperands().get(1), alloca));
+					}
+					continue;
+				}
+
+				if (instruction.getOperands().contains(value)) {
+					// 使用前先load
+					Load load = new Load("%-1", alloca);
+					basicBlock.add(i, load);
+					instruction.replaceUse(value, load);
+					i++;
+				}
 				if (instruction == value) {
 					// 为定义语句，后面添加一条store
 					basicBlock.add(i + 1, new Store(instruction, alloca));
-					i++;
-					continue;
-				}
-				if (instruction.getOperands().contains(value)) {
-					Load load = new Load("%-1", alloca);
-					basicBlock.add(i, load);
-					for (int j = 0; j < instruction.getOperands().size(); j++) {
-						Value operand = instruction.getOperands().get(j);
-						if (operand == value) {
-							instruction.getOperands().set(j, load);
-						}
-					}
 					i++;
 				}
 			}
 		}
 	}
 
-	private void shareRegister(Value a, String  reg) {
+	private void shareRegister(Value a, String reg) {
 		for (Value b : coalesces.keySet()) {
 			if (coalesces.get(b) == a) {
 				functionRegisters.put(b, reg);

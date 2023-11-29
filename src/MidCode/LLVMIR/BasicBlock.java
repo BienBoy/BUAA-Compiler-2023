@@ -58,7 +58,7 @@ public class BasicBlock extends Value {
 		instruction.replaceUse(from, to);
 	}
 
-	// 将PC替换为其他指令to(s)
+	// 将指令from替换为其他指令to(s)
 	public void replaceInstruction(Instruction from, Instruction...to) {
 		Integer position = null;
 		for (int i = 0; i < instructions.size(); i++) {
@@ -70,10 +70,9 @@ public class BasicBlock extends Value {
 		if (position == null) {
 			return;
 		}
-		instructions.remove(position.intValue());
-		from.removeUse();
+		from.delete();
 		for (int i = 0; i < to.length; i++) {
-			instructions.add(position + i, to[i]);
+			add(position + i, to[i]);
 		}
 	}
 }

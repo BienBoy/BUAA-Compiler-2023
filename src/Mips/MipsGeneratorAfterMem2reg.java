@@ -302,7 +302,7 @@ public class MipsGeneratorAfterMem2reg {
 
 				writer.write(String.format("mul $a%d, $a%d, %d", reg2, reg1, layerSize));
 				writer.newLine();
-				writer.write(String.format("addiu $a%d, $a%d, $a%d", reg0, reg0, reg2));
+				writer.write(String.format("addu $a%d, $a%d, $a%d", reg0, reg0, reg2));
 				writer.newLine();
 			}
 		}

@@ -72,7 +72,6 @@ public class ReplacePhi extends BaseOptimizer {
 				if (instruction instanceof PC) {
 					PC pc = (PC) instruction;
 					basicBlock.replaceInstruction(pc, pc.sequential());
-					pc.delete();
 					continue;
 				}
 				i++;
