@@ -28,6 +28,8 @@ public class MipsGeneratorAfterRegisterAlloc {
 		optimizer.optimize(module);
 		registers = optimizer.getRegisters();
 		registerAvailable = new HashSet<>(registers.values());
+		registerAvailable.remove("$a0");
+		registerAvailable.remove("$a1");
 		generateMipsFromModule();
 	}
 
