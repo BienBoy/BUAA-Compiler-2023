@@ -189,7 +189,8 @@ public class IrBuilder {
 		} else if (stmt instanceof StmtExp) {
 			generateInstructionsFromStmtExp((StmtExp) stmt);
 		} else if (stmt instanceof StmtFor) {
-			generateInstructionsFromStmtFor((StmtFor) stmt);
+//			generateInstructionsFromStmtFor((StmtFor) stmt);
+			generateInstructionsFromStmtForBetter((StmtFor) stmt);
 		} else if (stmt instanceof StmtGetInt) {
 			generateInstructionsFromStmtGetInt((StmtGetInt) stmt);
 		} else if (stmt instanceof StmtIf) {
@@ -287,6 +288,80 @@ public class IrBuilder {
 			generateInstructionsFromForStmt(forStmt2);
 		}
 		currentBasicBlock.add(generateBr(temp));
+
+		// 离开循环
+		currentBasicBlock = loopBasicBlocks[1];
+		currentFunction.addBasicBlock(currentBasicBlock);
+		nameBasicBlock(currentBasicBlock);
+		loopBasicBlocks[0] = temp2;
+		loopBasicBlocks[1] = temp3;
+	}
+
+	private void generateInstructionsFromStmtForBetter(StmtFor stmtFor) {
+		ForStmt forStmt1 = stmtFor.getFirstForStmt();
+		ForStmt forStmt2 = stmtFor.getSecondForStmt();
+		Cond cond = stmtFor.getCond();
+
+		if (forStmt1 != null) {
+			generateInstructionsFromForStmt(forStmt1);
+		}
+
+		BasicBlock temp = generateBasicBlock();
+		currentBasicBlock.add(generateBr(temp));
+
+		// 进入判断条件所在的基本块
+		currentBasicBlock = temp;
+		currentFunction.addBasicBlock(currentBasicBlock);
+
+		basicBlocks[0] = pregenerateBasicBlock();
+		basicBlocks[1] = pregenerateBasicBlock();
+
+		if (cond != null) {
+			generateInstructionsFromCond(cond);
+		} else {
+			// 没有判断语句。直接跳转即可
+			currentBasicBlock.add(generateBr(basicBlocks[0]));
+		}
+
+		// 进入循环体块
+		currentBasicBlock = basicBlocks[0];
+		currentFunction.addBasicBlock(currentBasicBlock);
+		nameBasicBlock(currentBasicBlock);
+
+		BasicBlock loopEntry = currentBasicBlock;
+
+		// 备份循环体外的BasicBlock
+		BasicBlock temp2 = loopBasicBlocks[0];
+		BasicBlock temp3 = loopBasicBlocks[1];
+
+		loopBasicBlocks[0] = pregenerateBasicBlock();
+		loopBasicBlocks[1] = basicBlocks[1];
+
+		Stmt stmt = stmtFor.getStmt();
+		generateInstructionsFromStmt(stmt);
+		if (currentBasicBlock.getInstructions().isEmpty() ||
+				!(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Ret) ||
+				!(currentBasicBlock.getInstructions().get(currentBasicBlock.getInstructions().size() - 1) instanceof Br)
+		) {
+			currentBasicBlock.add(generateBr(loopBasicBlocks[0]));
+		}
+
+		currentBasicBlock = loopBasicBlocks[0];
+		currentFunction.addBasicBlock(currentBasicBlock);
+		nameBasicBlock(currentBasicBlock);
+		if (forStmt2 != null) {
+			generateInstructionsFromForStmt(forStmt2);
+		}
+
+		// 循环优化，添加条件判断语句，减少跳转
+		basicBlocks[0] = loopEntry;
+		basicBlocks[1] = loopBasicBlocks[1];
+		if (cond != null) {
+			generateInstructionsFromCond(cond);
+		} else {
+			// 没有判断语句。直接跳转即可
+			currentBasicBlock.add(generateBr(basicBlocks[0]));
+		}
 
 		// 离开循环
 		currentBasicBlock = loopBasicBlocks[1];
