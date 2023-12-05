@@ -228,7 +228,6 @@ public class RegisterAlloc extends BaseOptimizer {
 		}
 	}
 
-
 	private void buildMoveRelated(Function function) {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
 			for (Instruction instruction : basicBlock.getInstructions()) {
