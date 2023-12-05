@@ -5,6 +5,7 @@ import Lexical.Lexer;
 import Lexical.Token;
 import MidCode.IrBuilder;
 import MidCode.LLVMIR.IrModule;
+import Mips.MipsGenerator;
 import Mips.MipsGeneratorAfterMem2reg;
 import Mips.MipsGeneratorAfterRegisterAlloc;
 import Optimizer.MidCode.MidCodeOptimizer;
@@ -22,10 +23,12 @@ import java.util.stream.Stream;
 public class Compiler {
 	public static void main(String[] args) {
 		String input = "./testfile.txt";
-		String output = "./output.txt";
 		String error = "./error.txt";
 		String midCode = "./llvm_ir.txt";
 		String mips = "./mips.txt";
+
+		boolean optimize = true;
+
 		StringBuilder program = new StringBuilder();
 		try (Stream<String> lines = Files.lines(Paths.get(input))) {
 			lines.forEach(line -> program.append(line).append("\n"));
@@ -60,8 +63,10 @@ public class Compiler {
 		IrBuilder irBuilder = new IrBuilder((CompUnit) root);
 		IrModule module = irBuilder.generate();
 
-		// 中端优化
-		new MidCodeOptimizer().optimize(module);
+		if (optimize) {
+			// 中端优化
+			new MidCodeOptimizer().optimize(module);
+		}
 
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(midCode))) {
 			module.output(writer);
@@ -70,8 +75,13 @@ public class Compiler {
 		}
 
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(mips))) {
-			MipsGeneratorAfterRegisterAlloc mipsGenerator = new MipsGeneratorAfterRegisterAlloc(module, writer);
-			mipsGenerator.generate();
+			if (optimize) {
+				MipsGeneratorAfterRegisterAlloc mipsGenerator = new MipsGeneratorAfterRegisterAlloc(module, writer);
+				mipsGenerator.generate();
+			} else {
+				MipsGenerator mipsGenerator = new MipsGenerator(module, writer);
+				mipsGenerator.generate();
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
