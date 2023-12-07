@@ -8,7 +8,7 @@ import Optimizer.CFG;
 
 import java.util.*;
 
-public class GCMWithBugs extends BaseOptimizer {
+public class GCM extends BaseOptimizer {
 	@Override
 	public void optimize(IrModule module) {
 		for (Function function : module.getFunctions()) {
@@ -19,75 +19,38 @@ public class GCMWithBugs extends BaseOptimizer {
 
 	private CFG graph;
 	private DomTree domTree;
-	private Map<Instruction, BasicBlock> selected;
 	private Map<Instruction, BasicBlock> latest;
 	private Set<Instruction> visited;
 	private Set<Instruction> toAdd;
 	private void gcm(Function function) {
 		graph = new CFG(function);
 		domTree = new DomTree(graph);
-		selected = new HashMap<>();
 		latest = new HashMap<>();
 
-		// 初始化
+		List<Instruction> instructions = new ArrayList<>();
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (Instruction instruction : basicBlock.getInstructions()) {
-				selected.put(instruction, basicBlock);
-			}
+			instructions.addAll(basicBlock.getInstructions());
 		}
 
 		visited = new HashSet<>();
-		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (Instruction instruction : basicBlock.getInstructions()) {
-				if (isPinnedInst(instruction)) {
-					visited.add(instruction);
-					for (Value value : instruction.getOperands()) {
-						if (value instanceof Instruction) {
-							scheduleEarly((Instruction) value);
-						}
+		for (Instruction instruction : instructions) {
+			if (isPinnedInst(instruction)) {
+				visited.add(instruction);
+				for (Value value : instruction.getOperands()) {
+					if (value instanceof Instruction) {
+						scheduleEarly((Instruction) value);
 					}
 				}
 			}
 		}
 
 		visited = new HashSet<>();
-		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (Instruction instruction : basicBlock.getInstructions()) {
-				if (isPinnedInst(instruction)) {
-					visited.add(instruction);
-					for (Use use : instruction.getUseList()) {
-						scheduleLate((Instruction) use.getUser());
-					}
+		for (Instruction instruction : instructions) {
+			if (isPinnedInst(instruction)) {
+				visited.add(instruction);
+				for (Use use : instruction.getUseList()) {
+					scheduleLate((Instruction) use.getUser());
 				}
-			}
-		}
-
-		visited = new HashSet<>();
-		toAdd = new LinkedHashSet<>();
-		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (Instruction instruction : basicBlock.getInstructions()) {
-				if (!visited.contains(instruction)) {
-					visited.add(instruction);
-					for (Value value : instruction.getOperands()) {
-						if (value instanceof Instruction) {
-							schedule((Instruction) value);
-						}
-					}
-					toAdd.add(instruction);
-				}
-			}
-		}
-		for (Instruction instruction : toAdd) {
-			instruction.getBasicBlock().getInstructions().remove(instruction);
-			selected.get(instruction).add(instruction);
-		}
-		for (Instruction instruction : toAdd) {
-			if (instruction instanceof Br) {
-				instruction.getBasicBlock().getInstructions().remove(instruction);
-				selected.get(instruction).add(instruction);
-			} else if (instruction instanceof Phi) {
-				instruction.getBasicBlock().getInstructions().remove(instruction);
-				selected.get(instruction).add(0, instruction);
 			}
 		}
 	}
@@ -96,7 +59,8 @@ public class GCMWithBugs extends BaseOptimizer {
 		return instruction instanceof Phi || instruction instanceof Br ||
 				instruction instanceof Ret || instruction instanceof Call ||
 				instruction instanceof GetInt || instruction instanceof Putint ||
-				instruction instanceof Putstr;
+				instruction instanceof Putstr || instruction instanceof Alloca ||
+				instruction instanceof Load || instruction instanceof Getelementptr;
 	}
 
 	private void scheduleEarly(Instruction instruction) {
@@ -105,19 +69,31 @@ public class GCMWithBugs extends BaseOptimizer {
 		}
 		visited.add(instruction);
 
-		if (!isPinnedInst(instruction)) {
-			selected.put(instruction, domTree.root);
-		}
+		BasicBlock block = domTree.root;
 
 		for (Value value : instruction.getOperands()) {
 			if (value instanceof Instruction) {
 				scheduleEarly((Instruction) value);
-				int d1 = domTree.getDomDepth(selected.get(instruction));
-				int d2 = domTree.getDomDepth(selected.get(value));
+				int d1 = domTree.getDomDepth(block);
+				int d2 = domTree.getDomDepth(((Instruction) value).getBasicBlock());
 				if (d1 < d2 && !isPinnedInst(instruction)) {
-					selected.put(instruction, selected.get(value));
+					block = ((Instruction) value).getBasicBlock();
 				}
 			}
+		}
+
+		if (!isPinnedInst(instruction)) {
+			instruction.getBasicBlock().getInstructions().remove(instruction);
+			int pos = 0;
+			for (int i = 0; i < block.getInstructions().size(); i++) {
+				Instruction ins = block.getInstructions().get(i);
+				if (instruction.getOperands().contains(ins) ||
+						ins instanceof Phi ||
+						ins instanceof Alloca) {
+					pos = i + 1;
+				}
+			}
+			block.add(pos, instruction);
 		}
 	}
 
@@ -131,26 +107,21 @@ public class GCMWithBugs extends BaseOptimizer {
 
 		for (Use use : instruction.getUseList()) {
 			scheduleLate((Instruction) use.getUser());
-			BasicBlock block = selected.get((Instruction) use.getUser());
+			BasicBlock block = ((Instruction) use.getUser()).getBasicBlock();
 			if (use.getUser() instanceof Phi) {
 				Phi phi = (Phi) use.getUser();
 				for (int i = 0; i < phi.getOperands().size(); i+=2) {
 					if (phi.getOperands().get(i + 1) == instruction) {
 						block = (BasicBlock) phi.getOperands().get(i);
-						if (!isPinnedInst(instruction)) {
-							lca = findLCA(lca, block);
-						}
+						lca = findLCA(lca, block);
 					}
 				}
 			}
-			if (!isPinnedInst(instruction)) {
-				lca = findLCA(lca, block);
-			}
+			lca = findLCA(lca, block);
 		}
-		if (!isPinnedInst(instruction)) {
-			latest.put(instruction, lca);
-			selectBlock(instruction);
-		}
+
+		latest.put(instruction, lca);
+		selectBlock(instruction);
 	}
 
 	private BasicBlock findLCA(BasicBlock a, BasicBlock b) {
@@ -172,30 +143,31 @@ public class GCMWithBugs extends BaseOptimizer {
 	}
 
 	private void selectBlock(Instruction instruction) {
+		if (isPinnedInst(instruction)) {
+			return;
+		}
+
 		BasicBlock lca = latest.get(instruction);
-		lca = lca == null ? selected.get(instruction) : lca;
+		lca = lca == null ? instruction.getBasicBlock() : lca;
 		BasicBlock best = lca;
-		while (lca != selected.get(instruction)) {
+		while (lca != instruction.getBasicBlock()) {
 			if (domTree.getLoopDepth(lca) < domTree.getLoopDepth(best)) {
 				best = lca;
 			}
 			lca = graph.getImmediateDoms().get(lca);
 		}
-		selected.put(instruction, best);
-	}
 
-	private void schedule(Instruction instruction) {
-		if (visited.contains(instruction)) {
-			return;
-		}
-		visited.add(instruction);
-
-		for (Value value : instruction.getOperands()) {
-			if (value instanceof Instruction) {
-				schedule((Instruction) value);
+		instruction.getBasicBlock().getInstructions().remove(instruction);
+		int pos = 0;
+		for (int i = 0; i < best.getInstructions().size(); i++) {
+			Instruction ins = best.getInstructions().get(i);
+			if (instruction.getOperands().contains(ins) ||
+					ins instanceof Phi ||
+					ins instanceof Alloca) {
+				pos = i + 1;
 			}
 		}
-		toAdd.add(instruction);
+		best.add(pos, instruction);
 	}
 
 	private static class DomTree {

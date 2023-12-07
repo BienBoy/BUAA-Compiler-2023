@@ -253,7 +253,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 			String reg1 = getRegister(load);
 			writer.write(String.format("lw %s, %s", reg1, label));
 			writer.newLine();
-		} else if (address instanceof Getelementptr) {
+		} else if (address instanceof Getelementptr || address instanceof Load) {
 			// 地址由getelementptr计算出
 			String reg2 = getRegister(address);
 			String reg1 = getRegister(load);
