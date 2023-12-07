@@ -20,49 +20,44 @@ public class PC extends Instruction {
 	 * 并行复制串行化
 	 */
 	public Instruction[] sequential() {
+		Empty n = new Empty();
 		ArrayList<Instruction> copies = new ArrayList<>();
-		// 去除a==b的
-		for (int i = 0; i < operands.size();) {
-			if (operands.get(i) == operands.get(i + 1)){
-				Value b = operands.get(i);
-				Value a = operands.get(i + 1);
-				copies.add(new Move(b, a));
-				operands.remove(i);
-				operands.remove(i);
-				continue;
-			}
-			i+=2;
+		ArrayList<Value> ready = new ArrayList<>();
+		ArrayList<Value> to_do = new ArrayList<>();
+		HashMap<Value, Value> pred = new HashMap<>();
+		HashMap<Value, Value> loc = new HashMap<>();
+		for (int i = 0; i < operands.size(); i+=2) {
+			loc.put(operands.get(i + 1), operands.get(i + 1));
+			pred.put(operands.get(i), operands.get(i + 1));
+			to_do.add(operands.get(i));
 		}
-
-		while (!operands.isEmpty()) {
-			assert operands.size() % 2 == 0;
-			Integer pos = null;
-			for (int i = 0; i < operands.size(); i+=2) {
-				boolean flag = true;
-				for (int j = 0; j < operands.size(); j+=2) {
-					if (j == i) {
-						continue;
-					}
-					if (operands.get(j + 1) == operands.get(i)) {
-						flag = false;
-						break;
-					}
-				}
-				if (flag) {
-					pos = i;
-					break;
+		for (int i = 0; i < operands.size(); i+=2) {
+			if (!loc.containsKey(operands.get(i))) {
+				ready.add(operands.get(i));
+			}
+		}
+		while (!to_do.isEmpty()) {
+			while (!ready.isEmpty()) {
+				Value b = ready.get(0);
+				ready.remove(0);
+				Value a = pred.get(b);
+				Value c = loc.get(a);
+				copies.add(new Move(b, c));
+				loc.put(a, b);
+				if (a == c && pred.containsKey(a)) {
+					ready.add(a);
 				}
 			}
-			if (pos != null) {
-				copies.add(new Move(operands.get(pos), operands.get(pos + 1)));
-				operands.remove(pos.intValue());
-				operands.remove(pos.intValue());
-			} else {
-				Empty n = new Empty();
-				copies.add(n);
-				copies.add(new Move(n, operands.get(1)));
-				operands.set(1, n);
+			Value b = to_do.get(0);
+			to_do.remove(0);
+			if (b != loc.get(pred.get(b))) {
+				copies.add(new Move(n, b));
+				loc.put(b, n);
+				ready.add(b);
 			}
+		}
+		if (!n.getUseList().isEmpty()) {
+			copies.add(0, n);
 		}
 		return copies.toArray(new Instruction[0]);
 	}
