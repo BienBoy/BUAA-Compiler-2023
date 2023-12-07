@@ -71,6 +71,12 @@ public class ConstantFold extends BaseOptimizer {
 							change = true;
 							toReplace.put(instruction, new ConstInt(0));
 						}
+					} else if (((ConstInt) right).getValue() == -1) {
+						// 乘除-1在生成mips时处理
+						if (instruction instanceof Srem) {
+							change = true;
+							toReplace.put(instruction, new ConstInt(0));
+						}
 					}
 				}
 			}
