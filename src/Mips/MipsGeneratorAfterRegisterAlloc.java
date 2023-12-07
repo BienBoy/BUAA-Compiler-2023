@@ -366,6 +366,12 @@ public class MipsGeneratorAfterRegisterAlloc {
 			} else if (op.equals("subu")) {
 				writer.write(String.format("addiu %s, %s, %d", reg0, reg1, -val));
 				writer.newLine();
+			} else if (op.equals("mul") && canDoMulOptimize(val)) {
+				// 乘法优化
+				mulOptimize((Mul) instruction);
+			} else if (op.equals("div")) {
+				// 除法优化
+				divOptimize((Sdiv) instruction);
 			} else {
 				writer.write(String.format(op + " %s, %s, %d", reg0, reg1, val));
 				writer.newLine();
@@ -389,6 +395,167 @@ public class MipsGeneratorAfterRegisterAlloc {
 			writer.write(String.format(op + " %s, %s, %s", reg0, reg1, reg2));
 			writer.newLine();
 		}
+	}
+
+	private boolean canDoMulOptimize(int value) {
+		boolean isNeg = value < 0;
+		if (isNeg) {
+			value = -value;
+		}
+		long a = 1;
+		while (a <= value) {
+			a *= 2;
+		}
+		if (a - value <= (isNeg ? 1 : 2)) {
+			return true;
+		}
+		a /= 2;
+		return isNeg ? value - a <= 1 : value - a <= 2;
+	}
+
+	private void mulOptimize(Mul mul) throws IOException {
+		Value left = mul.getOperands().get(0);
+		Value right = mul.getOperands().get(1);
+		int val = ((ConstInt) right).getValue();
+		String reg0 = getRegister(mul);
+		String reg1 = getRegister(left);
+		if (val == 0) {
+			writer.write(String.format("li %s, 0", reg0));
+			writer.newLine();
+			return;
+		} else if (val == 1) {
+			writer.write(String.format("move %s, %s", reg0, reg1));
+			writer.newLine();
+			return;
+		} else if (val == -1) {
+			writer.write(String.format("subu %s, $0, %s", reg0, reg1));
+			writer.newLine();
+			return;
+		}
+		boolean isNeg = val < 0;
+		if (isNeg) {
+			val = -val;
+		}
+		int a = 0;
+		while (1L << a <= val) {
+			a++;
+		}
+		int subCount = (int) ((1L << a) - val);
+		a--;
+		int addCount = val - (1 << a);
+		if (addCount == 0) {
+			writer.write(String.format("sll %s, %s, %d", reg0, reg1, a));
+			writer.newLine();
+		} else if (addCount <= subCount) {
+			writer.write(String.format("sll $a2, %s, %d", reg1, a));
+			writer.newLine();
+
+			for (int i = 0; i < addCount; i++) {
+				if (i == addCount - 1) {
+					writer.write(String.format("addu %s, $a2, %s", reg0, reg1));
+					writer.newLine();
+				}
+			}
+		} else {
+			writer.write(String.format("sll $a2, %s, %d", reg1, a + 1));
+			writer.newLine();
+
+			for (int i = 0; i < subCount; i++) {
+				if (i == subCount - 1) {
+					writer.write(String.format("subu %s, $a2, %s", reg0, reg1));
+					writer.newLine();
+				}
+			}
+		}
+
+		if (isNeg) {
+			writer.write(String.format("subu %s, $0, %s", reg0, reg0));
+			writer.newLine();
+		}
+	}
+
+	private void divOptimize(Sdiv sdiv) throws IOException {
+		Value left = sdiv.getOperands().get(0);
+		Value right = sdiv.getOperands().get(1);
+		int val = ((ConstInt) right).getValue();
+		String reg0 = getRegister(sdiv);
+		String reg1 = getRegister(left);
+		if (val == 1) {
+			writer.write(String.format("move %s, %s", reg0, reg1));
+			writer.newLine();
+			return;
+		} else if (val == -1) {
+			writer.write(String.format("subu %s, $0, %s", reg0, reg1));
+			writer.newLine();
+			return;
+		}
+
+		int abs = val >= 0 ? val : -val;
+		if ((abs & (abs - 1)) == 0) {
+			// (n + ((n >> 31) >>> (32 - l))) >> l
+			writer.write(String.format("sra $a2, %s, 31", reg1));
+			writer.newLine();
+			int l = getCTZ(abs);
+			writer.write(String.format("srl $a2, $a2, %d", 32 - l));
+			writer.newLine();
+			writer.write(String.format("addu $a2, $a2, %s", reg1));
+			writer.newLine();
+			writer.write(String.format("sra %s, $a2, %d", reg0, l));
+			writer.newLine();
+		} else {
+			long[] multiplier = chooseMultiplier(abs, 31);
+			long m = multiplier[0];
+			long sh = multiplier[1];
+			if (m < 2147483648L) {
+				writer.write(String.format("li $a2, %d", m));
+				writer.newLine();
+				writer.write(String.format("mult %s, $a2", reg1));
+				writer.newLine();
+				writer.write("mfhi $a3");
+				writer.newLine();
+			} else {
+				writer.write(String.format("li $a2, %d", m - (1L << 32)));
+				writer.newLine();
+				writer.write(String.format("mult %s, $a2", reg1));
+				writer.newLine();
+				writer.write("mfhi $a3");
+				writer.newLine();
+				writer.write(String.format("addu $a3, $a3, %s", reg1));
+				writer.newLine();
+			}
+			writer.write(String.format("sra $a3, $a3, %d", sh));
+			writer.newLine();
+			writer.write(String.format("srl $a2, %s, 31", reg1));
+			writer.newLine();
+			writer.write(String.format("addu %s, $a3, $a2", reg0));
+			writer.newLine();
+		}
+
+		if (val < 0) {
+			writer.write(String.format("subu %s, $0, %s", reg0, reg0));
+			writer.newLine();
+		}
+	}
+
+	private int getCTZ(int num) {
+		int r = 0;
+		num >>>= 1;
+		while (num > 0) {
+			r++;
+			num >>>= 1;
+		}
+		return r; // 0 - 31
+	}
+
+	private long[] chooseMultiplier(int d, int prec) {
+		long nc = (1L << prec) - ((1L << prec) % d) - 1;
+		long p = 32;
+		while ((1L << p) <= nc * (d - (1L << p) % d)) {
+			p++;
+		}
+		long m = (((1L << p) + (long) d - (1L << p) % d) / (long) d);
+		long n = ((m << 32) >>> 32);
+		return new long[]{n, p - 32, 0L};
 	}
 
 	private void generateMipsFromZext(Zext zext) throws IOException {
