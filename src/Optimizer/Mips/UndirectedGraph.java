@@ -69,7 +69,7 @@ public class UndirectedGraph implements Cloneable {
 	@Override
 	protected Object clone() throws CloneNotSupportedException {
 		UndirectedGraph cloned = (UndirectedGraph) super.clone();
-		cloned.adjs = new LinkedHashMap<>(adjs);
+		cloned.adjs = new HashMap<>(adjs);
 		cloned.adjs.replaceAll((v, value) -> new HashSet<>(value));
 		return cloned;
 	}

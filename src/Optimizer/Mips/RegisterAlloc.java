@@ -133,15 +133,14 @@ public class RegisterAlloc extends BaseOptimizer {
 				}
 
 				for (Value operand : instruction.getOperands()) {
-					if (operand instanceof Alloca || operand instanceof GlobalVariable ||
-							operand instanceof BasicBlock || operand instanceof ConstString ||
-							operand instanceof FunctionParam) {
-						// 内存地址(Alloca、GlobalVariables、字符串)、标签不参与寄存器分配
-						continue;
-					}
 					if (operand instanceof ConstInt || operand instanceof Undef) {
 						// 对于数值常量、undef，直接交替分配寄存器
 						functionRegisters.put(operand, allocConstIntRegister());
+						continue;
+					}
+
+					if (operand instanceof Alloca || !(operand instanceof Instruction)) {
+						// 内存地址(Alloca、GlobalVariables、字符串)、标签等不参与寄存器分配
 						continue;
 					}
 
