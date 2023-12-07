@@ -58,7 +58,7 @@ public class BasicBlock extends Value {
 		instruction.replaceUse(from, to);
 	}
 
-	// 将指令from替换为其他指令to(s)
+	// 将指令from替换为其他指令to(s)，指令均为无结果指令
 	public void replaceInstruction(Instruction from, Instruction...to) {
 		Integer position = null;
 		for (int i = 0; i < instructions.size(); i++) {
