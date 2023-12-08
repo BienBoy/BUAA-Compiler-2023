@@ -15,9 +15,9 @@ public class MipsOptimizer extends BaseOptimizer {
 	@Override
 	public void optimize(IrModule module) {
 		new ReplacePhi().optimize(module);
-		new Rewrite().optimize(module);
 		new BrOptimizer().optimize(module);
 		new DeadCode().optimize(module);
+		new Rewrite().optimize(module);
 		try {
 			BufferedWriter writer = new BufferedWriter(new FileWriter("./replacephi.txt"));
 			module.output(writer);

@@ -6,6 +6,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 public class Ret extends Instruction {
+
+	public Ret() {}
 	public Ret(Value... operands) {
 		super(operands);
 	}

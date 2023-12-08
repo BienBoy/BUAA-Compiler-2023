@@ -25,4 +25,12 @@ public class Zext extends Instruction {
 	public boolean hasResult() {
 		return true;
 	}
+
+	public String getSorceType() {
+		return sorceType;
+	}
+
+	public String getTargetType() {
+		return targetType;
+	}
 }

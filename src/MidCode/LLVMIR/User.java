@@ -55,4 +55,21 @@ public class User extends Value {
 			}
 		}
 	}
+
+	/**
+	 * 将第一处使用的from替换为to
+	 * @param from 要替换的Value
+	 * @param to 替换后的Value
+	 */
+	public void replaceFirstUse(Value from, Value to) {
+		for (int i = 0; i < operands.size(); i++) {
+			if (operands.get(i).equals(from)) {
+				operands.set(i, to);
+				// 维护useList
+				to.addUse(new Use(to, this));
+				to.useList.removeIf(use -> use.getUser().equals(from));
+				break;
+			}
+		}
+	}
 }

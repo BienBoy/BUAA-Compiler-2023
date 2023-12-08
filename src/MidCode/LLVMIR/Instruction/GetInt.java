@@ -6,8 +6,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 public class GetInt extends Instruction {
-	public GetInt(String name, Value... operands) {
-		super(name, operands);
+	public GetInt(String name) {
+		super(name);
 	}
 
 	@Override

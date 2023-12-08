@@ -10,10 +10,10 @@ public class MidCodeOptimizer extends BaseOptimizer {
 		new DeadCode().optimize(module);
 		new Mem2reg().optimize(module);
 		new DeadCode().optimize(module);
+		new Inline().optimize(module);
+		new DeadCode().optimize(module);
 		new GVN().optimize(module);
 		new GCM().optimize(module);
-//		new LVN().optimize(module);
-//		new SimpleGVN().optimize(module);
 		new ConstantFold().optimize(module);
 	}
 }

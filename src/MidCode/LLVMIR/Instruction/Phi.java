@@ -9,7 +9,11 @@ import java.util.Map;
 
 public class Phi extends Instruction {
 	private Alloca var;
-	private BasicBlock[] pres;
+
+	public Phi(String name, Value...operands) {
+		// 用于函数内联时构造phi指令
+		super(name, operands);
+	}
 
 	public Phi(Alloca var) {
 		super();
