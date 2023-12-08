@@ -62,6 +62,9 @@ public class DeadCode extends BaseOptimizer {
 		for (BasicBlock basicBlock : function.getBasicBlocks()) {
 			removeDeadInstructions(basicBlock);
 		}
+
+		// 删除空块
+		function.getBasicBlocks().removeIf(b->b.getInstructions().isEmpty());
 	}
 
 	private void removeDeadInstructions(BasicBlock basicBlock) {
