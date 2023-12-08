@@ -10,9 +10,8 @@ import java.util.*;
 
 public class RegisterAlloc extends BaseOptimizer {
 	private final Set<String> registerAvailable = new HashSet<String>(){{
-		add("$t0");add("$t1");add("$t2");add("$t3");add("$t4");add("$t5");
-		add("$t6");add("$t7");add("$t8");add("$t9");add("$s0");add("$s1");
-		add("$s2");add("$s3");add("$s4");add("$s5");add("$s6");add("$s7");
+		add("$s0");add("$s1");add("$s2");add("$s3");
+		add("$s4");add("$s5");add("$s6");add("$s7");
 	}}; // 可用寄存器
 	private final int registerNum = registerAvailable.size(); // 可分配寄存器的数量
 	private final String[] constIntRegisters = new String[]{"$a0", "$a1"};
@@ -28,6 +27,8 @@ public class RegisterAlloc extends BaseOptimizer {
 	private Map<Value, Value> coalesces; // 记录合并的结点
 	private Map<Value, String> functionRegisters;
 	private Map<Value, String> registers = new HashMap<>();
+	private Set<Value> functionSpills;
+	private Map<Function, Set<Value>> spills = new HashMap<>();
 
 	@Override
 	public void optimize(IrModule module) {
@@ -40,59 +41,61 @@ public class RegisterAlloc extends BaseOptimizer {
 		return registers;
 	}
 
-	private boolean doSimplify, doCoalesce, doFreeze, restart;
+	public Map<Function, Set<Value>> getSpills() {
+		return spills;
+	}
+
+	private boolean doSimplify, doCoalesce, doFreeze;
 	public void allocRegisters(Function function) {
-		restart = true;
-		while (restart) {
-			restart = false;
-			graph = new CFG(function);
-			ins = new LinkedHashMap<>();
-			outs = new LinkedHashMap<>();
-			defs = new LinkedHashMap<>();
-			uses = new LinkedHashMap<>();
-			conflictGraph = new UndirectedGraph();
-			stack = new ArrayList<>();
-			coalesces = new HashMap<>();
-			functionRegisters =  new HashMap<>();
-			moveRelated = new UndirectedGraph();
+		graph = new CFG(function);
+		ins = new LinkedHashMap<>();
+		outs = new LinkedHashMap<>();
+		defs = new LinkedHashMap<>();
+		uses = new LinkedHashMap<>();
+		conflictGraph = new UndirectedGraph();
+		stack = new ArrayList<>();
+		coalesces = new HashMap<>();
+		functionRegisters =  new HashMap<>();
+		functionSpills = new HashSet<>();
+		moveRelated = new UndirectedGraph();
 
-			// 构建
-			build(function);
+		// 构建
+		build(function);
 
-			// 备份冲突图
-			try {
-				conflictGraphBackup = (UndirectedGraph) conflictGraph.clone();
-			} catch (CloneNotSupportedException e) {
-				throw new RuntimeException(e);
-			}
-
-			while (!conflictGraph.isEmpty()) {
-				doFreeze = true;
-				while (doFreeze) {
-					doFreeze = false;
-					doSimplify = doCoalesce = true;
-					while (doSimplify || doCoalesce) {
-						doSimplify = doCoalesce = false;
-						// 简化
-						simplify();
-						// 合并，有bug，暂不进行
-						// coalesce();
-					}
-					// 冻结
-					if (!conflictGraph.isEmpty()) {
-						freeze();
-					}
-				}
-				// 溢出
-				if (!conflictGraph.isEmpty()) {
-					spill();
-				}
-			}
-			// 选择
-			select(function);
+		// 备份冲突图
+		try {
+			conflictGraphBackup = (UndirectedGraph) conflictGraph.clone();
+		} catch (CloneNotSupportedException e) {
+			throw new RuntimeException(e);
 		}
+
+		while (!conflictGraph.isEmpty()) {
+			doFreeze = true;
+			while (doFreeze) {
+				doFreeze = false;
+				doSimplify = doCoalesce = true;
+				while (doSimplify || doCoalesce) {
+					doSimplify = doCoalesce = false;
+					// 简化
+					simplify();
+					// 合并，有bug，暂不进行
+					// coalesce();
+				}
+				// 冻结
+				if (!conflictGraph.isEmpty()) {
+					freeze();
+				}
+			}
+			// 溢出
+			if (!conflictGraph.isEmpty()) {
+				spill();
+			}
+		}
+		// 选择
+		select(function);
 		// 记录分配情况
 		registers.putAll(functionRegisters);
+		spills.put(function, functionSpills);
 	}
 
 	private void build(Function function) {
@@ -370,58 +373,14 @@ public class RegisterAlloc extends BaseOptimizer {
 			});
 			if (available.isEmpty()) {
 				// 实际溢出，需要更改该变量的使用为内存格式重新开始
-				restart = true;
-				changeToLoadStore(value, function);
-				return;
+				functionSpills.add(value);
+				continue;
+				// TODO 考虑合并寄存器的情况
 			}
 			String reg = available.iterator().next();
 			functionRegisters.put(value, reg);
 			// 合并的结点使用同一寄存器
 			shareRegister(value, reg);
-		}
-	}
-
-	private void changeToLoadStore(Value value, Function function) {
-		assert value instanceof Instruction;
-		Alloca alloca = new Alloca("%-1");
-		alloca.setSymbol(new Variable("temp"));
-		function.getBasicBlocks().get(0).add(0, alloca);
-		for (BasicBlock basicBlock : function.getBasicBlocks()) {
-			for (int i = 0; i < basicBlock.getInstructions().size(); i++) {
-				Instruction instruction = basicBlock.getInstructions().get(i);
-				if (instruction instanceof Alloca || instruction instanceof Empty) {
-					continue;
-				}
-
-				if (instruction instanceof Move) {
-					Move move = (Move) instruction;
-					if (move.getOperands().get(1) == value) {
-						// 使用前先load
-						Load load = new Load("%-1", alloca);
-						basicBlock.add(i, load);
-						move.replaceUse(value, load);
-						i++;
-					}
-					if (move.getOperands().get(0) == value) {
-						// 替换为store
-						basicBlock.replaceInstruction(move, new Store(move.getOperands().get(1), alloca));
-					}
-					continue;
-				}
-
-				if (instruction.getOperands().contains(value)) {
-					// 使用前先load
-					Load load = new Load("%-1", alloca);
-					basicBlock.add(i, load);
-					instruction.replaceUse(value, load);
-					i++;
-				}
-				if (instruction == value) {
-					// 为定义语句，后面添加一条store
-					basicBlock.add(i + 1, new Store(instruction, alloca));
-					i++;
-				}
-			}
 		}
 	}
 

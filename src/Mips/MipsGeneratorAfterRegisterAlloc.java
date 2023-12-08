@@ -11,8 +11,11 @@ import java.util.*;
 public class MipsGeneratorAfterRegisterAlloc {
 	private final IrModule module;
 	private final BufferedWriter writer;
-	private Set<String> registerAvailable; // 可用寄存器
-	Map<Value, String> registers;
+	private Set<String> globalRegisterUsed; // 可用寄存器
+	private Value[] tempRegisterUsed = new Value[10];
+	private LinkedHashMap<Value, Integer> tempRegisterUseMap = new LinkedHashMap<>();
+	private Map<Value, String> registers;
+	private Map<Function, Set<Value>> spills;
 	// 栈指针虚拟位置，初始时为0，仅用于计算偏移
 	private int sp = 0;
 	private Function currentFunction;
@@ -27,9 +30,10 @@ public class MipsGeneratorAfterRegisterAlloc {
 		MipsOptimizer optimizer = new MipsOptimizer();
 		optimizer.optimize(module);
 		registers = optimizer.getRegisters();
-		registerAvailable = new HashSet<>(registers.values());
-		registerAvailable.remove("$a0");
-		registerAvailable.remove("$a1");
+		globalRegisterUsed = new HashSet<>(registers.values());
+		globalRegisterUsed.remove("$a0");
+		globalRegisterUsed.remove("$a1");
+		spills = optimizer.getSpills();
 		generateMipsFromModule();
 	}
 
@@ -127,7 +131,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 		sp -= 4;
 		function.setRaAddr(sp);
 		Map<String, Integer> registerAddr = new HashMap<>();
-		registerAvailable.forEach(r->{
+		globalRegisterUsed.forEach(r->{
 			sp -= 4;
 			registerAddr.put(r, sp);
 		});
@@ -136,11 +140,11 @@ public class MipsGeneratorAfterRegisterAlloc {
 		allocStack(function.getPrimarySp() - sp);
 
 		saveToStack("$ra", function.getRaAddr() - sp);
-		for (String reg : registerAvailable) {
+		for (String reg : globalRegisterUsed) {
 			saveToStack(reg, registerAddr.get(reg) - sp);
 		}
 
-		// 为所有的中间变量分配空间
+		// 为alloca分配空间
 		int primary = sp;
 		for (BasicBlock b : currentFunction.getBasicBlocks()) {
 			for (Value v : b.getInstructions()) {
@@ -150,6 +154,11 @@ public class MipsGeneratorAfterRegisterAlloc {
 				}
 			}
 		}
+		// 为溢出的临时变量分配空间
+		for (Value value : spills.get(function)) {
+			sp -= 4;
+			value.setAddr("" + sp);
+		}
 		allocStack(primary - sp);
 
 		for (BasicBlock block : function.getBasicBlocks()) {
@@ -158,6 +167,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 		// 恢复$ra等、释放栈空间在生成jr $ra的函数中进行
 
 		sp = function.getPrimarySp();
+		freeAllTempRegistersWithoutStore();
 	}
 
 	public void generateMipsFromBasicBlock(BasicBlock block) throws IOException {
@@ -218,6 +228,11 @@ public class MipsGeneratorAfterRegisterAlloc {
 			} else if (instruction instanceof PushStack) {
 				generateMipsFromPushStack((PushStack) instruction);
 			}
+		}
+		if (!(instructions.get(instructions.size() - 1) instanceof Br)
+				&& !(instructions.get(instructions.size() - 1) instanceof Ret)) {
+			// Br被优化了
+			freeAllTempRegisters();
 		}
 	}
 
@@ -432,17 +447,14 @@ public class MipsGeneratorAfterRegisterAlloc {
 			writer.newLine();
 			return;
 		}
-		boolean isNeg = val < 0;
-		if (isNeg) {
-			val = -val;
-		}
+		int abs = val < 0 ? -val : val;
 		int a = 0;
-		while (1L << a <= val) {
+		while ((1L << a) <= abs) {
 			a++;
 		}
-		int subCount = (int) ((1L << a) - val);
+		int subCount = (int) ((1L << a) - abs);
 		a--;
-		int addCount = val - (1 << a);
+		int addCount = abs - (1 << a);
 		if (addCount == 0) {
 			writer.write(String.format("sll %s, %s, %d", reg0, reg1, a));
 			writer.newLine();
@@ -454,6 +466,9 @@ public class MipsGeneratorAfterRegisterAlloc {
 				if (i == addCount - 1) {
 					writer.write(String.format("addu %s, $a2, %s", reg0, reg1));
 					writer.newLine();
+				} else {
+					writer.write(String.format("addu $a2, $a2, %s", reg1));
+					writer.newLine();
 				}
 			}
 		} else {
@@ -464,11 +479,14 @@ public class MipsGeneratorAfterRegisterAlloc {
 				if (i == subCount - 1) {
 					writer.write(String.format("subu %s, $a2, %s", reg0, reg1));
 					writer.newLine();
+				} else {
+					writer.write(String.format("subu $a2, $a2, %s", reg1));
+					writer.newLine();
 				}
 			}
 		}
 
-		if (isNeg) {
+		if (val < 0) {
 			writer.write(String.format("subu %s, $0, %s", reg0, reg0));
 			writer.newLine();
 		}
@@ -578,7 +596,8 @@ public class MipsGeneratorAfterRegisterAlloc {
 		Function function = (Function) operands.get(0);
 
 		// 参数压栈已由ToStack指令进行
-		// 保存现场在被调用函数中进行
+		// 保存临时寄存器
+		freeAllTempRegisters();
 
 		// 跳转
 		writer.write(String.format("jal %s", function.getRawName()));
@@ -650,11 +669,13 @@ public class MipsGeneratorAfterRegisterAlloc {
 
 		// 恢复$ra等
 		loadFromStack("$ra", currentFunction.getRaAddr() - sp);
-		for (String reg : registerAvailable) {
+		for (String reg : globalRegisterUsed) {
 			loadFromStack(reg, currentFunction.getRegisterAddr().get(reg) - sp);
 		}
 		// 释放栈空间
 		freeStack(currentFunction.getPrimarySp() - sp);
+		// 函数返回语句也为跳转语句，需释放临时寄存器，但不需存回栈空间
+		freeAllTempRegistersWithoutStore();
 
 		// 返回
 		writer.write("jr $ra");
@@ -665,6 +686,8 @@ public class MipsGeneratorAfterRegisterAlloc {
 		ArrayList<Value> operands = b.getOperands();
 		if (operands.size() == 1) {
 			BasicBlock block = (BasicBlock) operands.get(0);
+			// 离开基本块前，释放寄存器
+			freeAllTempRegisters();
 			writer.write("j " + block.getMipsLabel(currentFunction.getRawName()));
 			writer.newLine();
 		} else {
@@ -673,6 +696,8 @@ public class MipsGeneratorAfterRegisterAlloc {
 			BasicBlock falseBlock = (BasicBlock) operands.get(2);
 
 			String reg = getRegister(cond);
+			// 离开基本块前，释放寄存器
+			freeAllTempRegisters();
 			writer.write(String.format("beqz %s, %s", reg, falseBlock.getMipsLabel(currentFunction.getRawName())));
 			writer.newLine();
 			writer.write(String.format("j %s", trueBlock.getMipsLabel(currentFunction.getRawName())));
@@ -742,7 +767,77 @@ public class MipsGeneratorAfterRegisterAlloc {
 			// 如果是数值字面量，需要先li
 			writer.write(String.format("li %s, %d", reg, ((ConstInt) value).getValue()));
 			writer.newLine();
+		} else if (reg == null) {
+			reg = "$t" + getTempRegister(value);
 		}
 		return reg;
+	}
+
+	private int allocTempRegister(Value value) throws IOException {
+		for (int i = 0; i < 10; i++) {
+			if (tempRegisterUsed[i] == null) {
+				// 记录分配情况
+				tempRegisterUsed[i] = value;
+				tempRegisterUseMap.put(value, i);
+				return i;
+			}
+		}
+
+		// 无空闲寄存器，需要释放
+		// 释放未访问时间最长的
+		Value v = tempRegisterUseMap.keySet().iterator().next();
+		int reg = tempRegisterUseMap.get(v);
+		freeTempRegister(v);
+
+		// 记录分配情况
+		tempRegisterUsed[reg] = value;
+		tempRegisterUseMap.put(value, reg);
+
+		return reg;
+	}
+
+	// 用于获取操作数（中间变量）所在的寄存器
+	private int getTempRegister(Value value) throws IOException {
+		if (tempRegisterUseMap.containsKey(value)) {
+			// 获取后更新访问时间
+			int reg = tempRegisterUseMap.get(value);
+			tempRegisterUseMap.remove(value);
+			tempRegisterUseMap.put(value, reg);
+			return reg;
+		}
+
+		// 分配寄存器并读入
+		int reg = allocTempRegister(value);
+
+		loadFromStack("$t" + reg, Integer.parseInt(value.getAddr()) - sp);
+		return reg;
+	}
+
+	private void freeTempRegister(Value value) throws IOException {
+		int reg = tempRegisterUseMap.get(value);
+		if (value instanceof Instruction) {
+			// 保存至栈
+			saveToStack("$t" + reg, Integer.parseInt(value.getAddr()) - sp);
+		}
+		tempRegisterUsed[reg] = null;
+		tempRegisterUseMap.remove(value);
+	}
+
+	// 释放临时寄存器，将值存回栈空间
+	private void freeAllTempRegisters() throws IOException {
+		for (Value value : tempRegisterUseMap.keySet()) {
+			int reg = tempRegisterUseMap.get(value);
+			if (tempRegisterUsed[reg] instanceof Instruction){
+				// 保存至栈
+				saveToStack("$t" + reg, Integer.parseInt(tempRegisterUsed[reg].getAddr()) - sp);
+			}
+			tempRegisterUsed[reg] = null;
+		}
+		tempRegisterUseMap.clear();
+	}
+
+	private void freeAllTempRegistersWithoutStore() {
+		tempRegisterUsed = new Value[10];
+		tempRegisterUseMap.clear();
 	}
 }

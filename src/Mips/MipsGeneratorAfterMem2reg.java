@@ -154,8 +154,7 @@ public class MipsGeneratorAfterMem2reg {
 		sp = function.getPrimarySp();
 
 		// 翻译完一个函数后，将registerUsed、registerUseMap清空
-		registerUsed = new Value[4];
-		registerUseMap = new LinkedHashMap<>();
+		freeAllRegWithoutStore();
 	}
 
 	public void generateMipsFromBasicBlock(BasicBlock block) throws IOException {
@@ -498,8 +497,7 @@ public class MipsGeneratorAfterMem2reg {
 
 		// 释放栈空间
 		freeStack(currentFunction.getPrimarySp() - sp);
-
-		// 函数返回时，需释放$a0-$a3，但不需存回栈空间
+		// 函数返回语句也为跳转语句，需释放临时寄存器，但不需存回栈空间
 		freeAllRegWithoutStore();
 
 		// 返回
