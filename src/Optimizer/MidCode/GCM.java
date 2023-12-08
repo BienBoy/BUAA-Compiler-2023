@@ -60,7 +60,7 @@ public class GCM extends BaseOptimizer {
 				instruction instanceof Ret || instruction instanceof Call ||
 				instruction instanceof GetInt || instruction instanceof Putint ||
 				instruction instanceof Putstr || instruction instanceof Alloca ||
-				instruction instanceof Load || instruction instanceof Getelementptr;
+				instruction instanceof Load;
 	}
 
 	private void scheduleEarly(Instruction instruction) {

@@ -82,7 +82,7 @@ public class GVN extends BaseOptimizer {
 			if (!ins.hasResult() || ins instanceof Alloca ||
 					ins instanceof Empty || ins instanceof Call ||
 					ins instanceof Phi || ins instanceof Load ||
-					ins instanceof GetInt || ins instanceof Getelementptr) {
+					ins instanceof GetInt) {
 				return Objects.hash(value);
 			}
 
@@ -118,7 +118,7 @@ public class GVN extends BaseOptimizer {
 
 			if (!insA.hasResult() || insA instanceof Alloca ||
 					insA instanceof Empty || insA instanceof Call ||
-					insA instanceof Phi || insA instanceof Load || insA instanceof Getelementptr) {
+					insA instanceof Phi || insA instanceof Load) {
 				return Objects.equals(a, b);
 			}
 
