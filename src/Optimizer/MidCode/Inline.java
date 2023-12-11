@@ -31,7 +31,7 @@ public class Inline extends BaseOptimizer {
 			for (Instruction instruction : basicBlock.getInstructions()) {
 				if (instruction instanceof Call) {
 					Function called = (Function) instruction.getOperands().get(0);
-					if (!canInline.contains(called)) {
+					if (called == function) {
 						return false;
 					}
 				}
