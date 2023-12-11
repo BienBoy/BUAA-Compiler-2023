@@ -4,7 +4,6 @@ import MidCode.LLVMIR.*;
 import MidCode.LLVMIR.Instruction.*;
 import Optimizer.BaseOptimizer;
 import Optimizer.CFG;
-import SymbolTable.Variable;
 
 import java.util.*;
 
@@ -26,7 +25,7 @@ public class RegisterAlloc extends BaseOptimizer {
 	private List<Value> stack; // 暂存需着色结点
 	private Map<Value, Value> coalesces; // 记录合并的结点
 	private Map<Value, String> functionRegisters;
-	private Map<Value, String> registers = new HashMap<>();
+	private Map<Function, Map<Value, String>> registers = new HashMap<>();
 	private Set<Value> functionSpills;
 	private Map<Function, Set<Value>> spills = new HashMap<>();
 
@@ -37,7 +36,7 @@ public class RegisterAlloc extends BaseOptimizer {
 		}
 	}
 
-	public Map<Value, String> getRegisters() {
+	public Map<Function, Map<Value, String>> getRegisters() {
 		return registers;
 	}
 
@@ -78,8 +77,8 @@ public class RegisterAlloc extends BaseOptimizer {
 					doSimplify = doCoalesce = false;
 					// 简化
 					simplify();
-					// 合并，有bug，暂不进行
-					// coalesce();
+					// 合并
+					coalesce();
 				}
 				// 冻结
 				if (!conflictGraph.isEmpty()) {
@@ -94,7 +93,7 @@ public class RegisterAlloc extends BaseOptimizer {
 		// 选择
 		select(function);
 		// 记录分配情况
-		registers.putAll(functionRegisters);
+		registers.put(function, functionRegisters);
 		spills.put(function, functionSpills);
 	}
 
@@ -268,7 +267,6 @@ public class RegisterAlloc extends BaseOptimizer {
 	}
 
 	private void coalesce() {
-		// TODO 有bug
 		// 保守合并无冲突的传送相关结点
 		boolean coalesced = true;
 		while (coalesced) {
@@ -291,6 +289,8 @@ public class RegisterAlloc extends BaseOptimizer {
 				doCoalesce = coalesced = true;
 				// 合并结点
 				conflictGraph.coalesce(first, second);
+				// 备份的冲突图中也要合并！！！
+				conflictGraphBackup.coalesce(first, second);
 				// 记录合并
 				coalesces.put(second, first);
 				// moveRelated中两结点合并
@@ -317,20 +317,6 @@ public class RegisterAlloc extends BaseOptimizer {
 			}
 		}
 		return count < registerNum;
-	}
-
-	private boolean george(Value a, Value b) {
-		// 根据George条件判断能否合并，即：
-		// a的所有高度数结点均和b冲突
-		for (Value value : conflictGraph.getAdjs(a)) {
-			if (conflictGraph.getAdjs(value).size() < registerNum) {
-				continue;
-			}
-			if (!conflictGraph.hasEdge(value, b)) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	private void freeze() {

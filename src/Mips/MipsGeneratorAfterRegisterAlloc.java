@@ -14,7 +14,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 	private Set<String> globalRegisterUsed; // 可用寄存器
 	private Value[] tempRegisterUsed = new Value[10];
 	private LinkedHashMap<Value, Integer> tempRegisterUseMap = new LinkedHashMap<>();
-	private Map<Value, String> registers;
+	private Map<Function, Map<Value, String>> registers;
 	private Map<Function, Set<Value>> spills;
 	// 栈指针虚拟位置，初始时为0，仅用于计算偏移
 	private int sp = 0;
@@ -30,9 +30,6 @@ public class MipsGeneratorAfterRegisterAlloc {
 		MipsOptimizer optimizer = new MipsOptimizer();
 		optimizer.optimize(module);
 		registers = optimizer.getRegisters();
-		globalRegisterUsed = new HashSet<>(registers.values());
-		globalRegisterUsed.remove("$a0");
-		globalRegisterUsed.remove("$a1");
 		spills = optimizer.getSpills();
 		generateMipsFromModule();
 	}
@@ -127,21 +124,28 @@ public class MipsGeneratorAfterRegisterAlloc {
 			offset += 4; // 参数大小均为4字节
 		}
 
-		// 保存$ra、$t0-$t9、$s0-$s7
+		// 保存$ra、$s0-$s7
 		sp -= 4;
 		function.setRaAddr(sp);
 		Map<String, Integer> registerAddr = new HashMap<>();
-		globalRegisterUsed.forEach(r->{
-			sp -= 4;
-			registerAddr.put(r, sp);
-		});
-		function.setRegisterAddr(registerAddr);
+		if (!function.getName().equals("@main")) {
+			globalRegisterUsed = new HashSet<>(registers.get(function).values());
+			globalRegisterUsed.remove("$a0");
+			globalRegisterUsed.remove("$a1");
+			globalRegisterUsed.forEach(r->{
+				sp -= 4;
+				registerAddr.put(r, sp);
+			});
+			function.setRegisterAddr(registerAddr);
+		}
 
 		allocStack(function.getPrimarySp() - sp);
 
 		saveToStack("$ra", function.getRaAddr() - sp);
-		for (String reg : globalRegisterUsed) {
-			saveToStack(reg, registerAddr.get(reg) - sp);
+		if (!function.getName().equals("@main")) {
+			for (String reg : globalRegisterUsed) {
+				saveToStack(reg, registerAddr.get(reg) - sp);
+			}
 		}
 
 		// 为alloca分配空间
@@ -669,8 +673,10 @@ public class MipsGeneratorAfterRegisterAlloc {
 
 		// 恢复$ra等
 		loadFromStack("$ra", currentFunction.getRaAddr() - sp);
-		for (String reg : globalRegisterUsed) {
-			loadFromStack(reg, currentFunction.getRegisterAddr().get(reg) - sp);
+		if (!currentFunction.getName().equals("@main")) {
+			for (String reg : globalRegisterUsed) {
+				loadFromStack(reg, currentFunction.getRegisterAddr().get(reg) - sp);
+			}
 		}
 		// 释放栈空间
 		freeStack(currentFunction.getPrimarySp() - sp);
@@ -696,7 +702,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 			BasicBlock falseBlock = (BasicBlock) operands.get(2);
 
 			String reg = getRegister(cond);
-			// 离开基本块前，释放寄存器
+			// 离开基本块前，释放临时寄存器
 			freeAllTempRegisters();
 			writer.write(String.format("beqz %s, %s", reg, falseBlock.getMipsLabel(currentFunction.getRawName())));
 			writer.newLine();
@@ -762,7 +768,7 @@ public class MipsGeneratorAfterRegisterAlloc {
 
 	// 用于获取操作数（中间变量）所在的寄存器
 	private String getRegister(Value value) throws IOException {
-		String reg = registers.get(value);
+		String reg = registers.get(currentFunction).get(value);
 		if (value instanceof ConstInt) {
 			// 如果是数值字面量，需要先li
 			writer.write(String.format("li %s, %d", reg, ((ConstInt) value).getValue()));

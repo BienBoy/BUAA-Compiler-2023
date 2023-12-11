@@ -33,7 +33,7 @@ public class MipsOptimizer extends BaseOptimizer {
 		new DeadCode().optimize(module); // 主要是为了删除空块
 	}
 
-	public Map<Value, String> getRegisters() {
+	public Map<Function, Map<Value, String>> getRegisters() {
 		return registerAlloc.getRegisters();
 	}
 
