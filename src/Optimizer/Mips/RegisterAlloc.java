@@ -360,8 +360,9 @@ public class RegisterAlloc extends BaseOptimizer {
 			if (available.isEmpty()) {
 				// 实际溢出，需要更改该变量的使用为内存格式重新开始
 				functionSpills.add(value);
+				// 考虑合并寄存器的结点
+				shareSpill(value);
 				continue;
-				// TODO 考虑合并寄存器的情况
 			}
 			String reg = available.iterator().next();
 			functionRegisters.put(value, reg);
@@ -375,6 +376,15 @@ public class RegisterAlloc extends BaseOptimizer {
 			if (coalesces.get(b) == a) {
 				functionRegisters.put(b, reg);
 				shareRegister(b, reg);
+			}
+		}
+	}
+
+	private void shareSpill(Value a) {
+		for (Value b : coalesces.keySet()) {
+			if (coalesces.get(b) == a) {
+				functionSpills.add(b);
+				shareSpill(b);
 			}
 		}
 	}
