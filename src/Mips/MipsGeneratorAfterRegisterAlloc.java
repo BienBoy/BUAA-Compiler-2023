@@ -391,6 +391,8 @@ public class MipsGeneratorAfterRegisterAlloc {
 			} else if (op.equals("div")) {
 				// 除法优化
 				divOptimize((Sdiv) instruction);
+			} else if (op.equals("rem")) {
+				modOptimize((Srem) instruction);
 			} else {
 				writer.write(String.format(op + " %s, %s, %d", reg0, reg1, val));
 				writer.newLine();
@@ -555,6 +557,109 @@ public class MipsGeneratorAfterRegisterAlloc {
 
 		if (val < 0) {
 			writer.write(String.format("subu %s, $0, %s", reg0, reg0));
+			writer.newLine();
+		}
+	}
+
+	private void modOptimize(Srem srem) throws IOException {
+		// a % b = a - a / b * b
+		Value left = srem.getOperands().get(0);
+		Value right = srem.getOperands().get(1);
+		int val = ((ConstInt) right).getValue();
+		String reg0 = getRegister(srem);
+		String reg1 = getRegister(left);
+		if (val == 1 || val == -1) {
+			writer.write(String.format("li %s, 0", reg0));
+			writer.newLine();
+			return;
+		}
+
+		int abs = val >= 0 ? val : -val;
+		if ((abs & (abs - 1)) == 0) {
+			// (n + ((n >> 31) >>> (32 - l))) >> l
+			writer.write(String.format("sra $a2, %s, 31", reg1));
+			writer.newLine();
+			int l = getCTZ(abs);
+			writer.write(String.format("srl $a2, $a2, %d", 32 - l));
+			writer.newLine();
+			writer.write(String.format("addu $a2, $a2, %s", reg1));
+			writer.newLine();
+			writer.write(String.format("sra $a2, $a2, %d", l));
+			writer.newLine();
+		} else {
+			long[] multiplier = chooseMultiplier(abs, 31);
+			long m = multiplier[0];
+			long sh = multiplier[1];
+			if (m < 2147483648L) {
+				writer.write(String.format("li $a2, %d", m));
+				writer.newLine();
+				writer.write(String.format("mult %s, $a2", reg1));
+				writer.newLine();
+				writer.write("mfhi $a3");
+				writer.newLine();
+			} else {
+				writer.write(String.format("li $a2, %d", m - (1L << 32)));
+				writer.newLine();
+				writer.write(String.format("mult %s, $a2", reg1));
+				writer.newLine();
+				writer.write("mfhi $a3");
+				writer.newLine();
+				writer.write(String.format("addu $a3, $a3, %s", reg1));
+				writer.newLine();
+			}
+			writer.write(String.format("sra $a3, $a3, %d", sh));
+			writer.newLine();
+			writer.write(String.format("srl $a2, %s, 31", reg1));
+			writer.newLine();
+			writer.write("addu $a2, $a3, $a2");
+			writer.newLine();
+		}
+
+		if (val < 0) {
+			writer.write("subu $a2, $0, $a2");
+			writer.newLine();
+		}
+
+		if (canDoMulOptimize(abs)) {
+			int a = 0;
+			while ((1L << a) <= abs) {
+				a++;
+			}
+			int subCount = (int) ((1L << a) - abs);
+			a--;
+			int addCount = abs - (1 << a);
+			if (addCount == 0) {
+				writer.write(String.format("sll $a3, $a2, %d", a));
+				writer.newLine();
+			} else if (addCount <= subCount) {
+				writer.write(String.format("sll $a3, $a2, %d", a));
+				writer.newLine();
+
+				for (int i = 0; i < addCount; i++) {
+					writer.write("addu $a3, $a3, $a2");
+					writer.newLine();
+				}
+			} else {
+				writer.write(String.format("sll $a3, $a2, %d", a + 1));
+				writer.newLine();
+
+				for (int i = 0; i < subCount; i++) {
+					writer.write("subu $a3, $a3, $a2");
+					writer.newLine();
+				}
+			}
+
+			if (val < 0) {
+				writer.write(String.format("addu %s, %s, $a3", reg0, reg1));
+				writer.newLine();
+			} else {
+				writer.write(String.format("subu %s, %s, $a3", reg0, reg1));
+				writer.newLine();
+			}
+		} else {
+			writer.write(String.format("mul $a2, $a2, %d", val));
+			writer.newLine();
+			writer.write(String.format("subu %s, %s, $a2", reg0, reg1));
 			writer.newLine();
 		}
 	}
