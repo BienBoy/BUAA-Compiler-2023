@@ -268,34 +268,30 @@ public class RegisterAlloc extends BaseOptimizer {
 
 	private void coalesce() {
 		// 保守合并无冲突的传送相关结点
-		boolean coalesced = true;
-		while (coalesced) {
-			coalesced = false;
-			Value first = null, second = null;
-			for (Value a : moveRelated.getAdjs().keySet()) {
-				for (Value b : moveRelated.getAdjs(a)) {
-					// 根据Briggs条件判断能否合并
-					if (!conflictGraph.hasEdge(a,b) && briggs(a, b)) {
-						first = a;
-						second = b;
-						break;
-					}
-				}
-				if (first != null && second != null) {
+		Value first = null, second = null;
+		for (Value a : moveRelated.getAdjs().keySet()) {
+			for (Value b : moveRelated.getAdjs(a)) {
+				// 根据Briggs条件判断能否合并
+				if (!conflictGraph.hasEdge(a,b) && briggs(a, b)) {
+					first = a;
+					second = b;
 					break;
 				}
 			}
 			if (first != null && second != null) {
-				doCoalesce = coalesced = true;
-				// 合并结点
-				conflictGraph.coalesce(first, second);
-				// 备份的冲突图中也要合并！！！
-				conflictGraphBackup.coalesce(first, second);
-				// 记录合并
-				coalesces.put(second, first);
-				// moveRelated中两结点合并
-				moveRelated.coalesce(first, second);
+				break;
 			}
+		}
+		if (first != null && second != null) {
+			doCoalesce = true;
+			// 合并结点
+			conflictGraph.coalesce(first, second);
+			// 备份的冲突图中也要合并！！！
+			conflictGraphBackup.coalesce(first, second);
+			// 记录合并
+			coalesces.put(second, first);
+			// moveRelated中两结点合并
+			moveRelated.coalesce(first, second);
 		}
 	}
 
