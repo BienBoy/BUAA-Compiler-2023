@@ -837,9 +837,10 @@ public class Parser {
 				));
 				// 忽略错误，补全分号，继续运行
 				stmt.append(new LeafNode(new Token(TokenType.SEMICN, ";", getToken().getLine())));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			return stmt;
 		}
@@ -1000,9 +1001,10 @@ public class Parser {
 				));
 				// 忽略错误，补全分号，继续运行
 				stmt.append(new LeafNode(new Token(TokenType.SEMICN, ";", getToken().getLine())));
+			} else {
+				stmt.append(new LeafNode(getToken()));
+				nextToken();
 			}
-			stmt.append(new LeafNode(getToken()));
-			nextToken();
 
 			return stmt;
 		}
